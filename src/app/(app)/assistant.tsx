@@ -3,13 +3,12 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Animated, Easing, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryWheel } from '@/components/relast/category-wheel';
 import { CircleButton } from '@/components/relast/circle-button';
-import { LiveCamera } from '@/components/relast/live-camera';
 import { PrimaryButton } from '@/components/relast/primary-button';
 import { WebCamera, type WebCameraHandle } from '@/components/relast/web-camera';
 import { Palette } from '@/constants/palette';
