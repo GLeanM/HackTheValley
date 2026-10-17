@@ -76,7 +76,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
       setHistory((prev) => {
         const next = [full, ...prev];
-        if (user) AsyncStorage.setItem(historyKey(user.email), JSON.stringify(next)).catch(() => {});
+        // Photos are temporary: keep them in memory for this session only, never on disk.
+        const persisted = next.map((h) => ({ ...h, imageUri: null }));
+        if (user) AsyncStorage.setItem(historyKey(user.email), JSON.stringify(persisted)).catch(() => {});
         return next;
       });
       return full;

@@ -9,7 +9,7 @@ export interface AiRequest {
 }
 
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
-export type BinType = 'recycling' | 'garbage' | 'compost' | 'unsure';
+export type BinType = 'recycling' | 'garbage' | 'compost' | 'hazardous' | 'ewaste' | 'unsure';
 
 export interface Recipe {
   title: string;
@@ -31,6 +31,8 @@ export interface AiResponse {
   alternatives: string[];
   confidence: { level: ConfidenceLevel; note: string };
   bin?: BinType;
+  /** Can the item be reused as-is or repurposed? `ideas` explains how. */
+  reuse?: { possible: boolean; ideas: string[] };
   lifecycle?: { estimate: string; repairs: string[]; donation: string[] };
   recipes?: Recipe[];
   /** Which provider produced this — never claim Gemini for mock output. */
