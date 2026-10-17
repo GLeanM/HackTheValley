@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Easing, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Animated, Easing, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryWheel } from '@/components/relast/category-wheel';
@@ -30,102 +30,76 @@ export default function AssistantScreen() {
   const [text, setText] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [category, setCategory] = useState<Category>(preset ?? 'sorter');
-  const [auto, setAuto] = useState(!preset);
-  const [textMode, setTextMode] = useState(false);
+  const [auto, setAuto] = useState(false);
+  const [focusOverlayMounted, setFocusOverlayMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const cameraBusy = useRef(false);
   const webCameraRef = useRef<WebCameraHandle | null>(null);
-  const inputBarRef = useRef<View | null>(null);
-  const focusedInputRef = useRef<TextInput | null>(null);
-  const focusedInputCardRef = useRef<View | null>(null);
-  const inputBarStartY = useRef<number | null>(null);
-  const focusStartOffset = useRef(-72);
-  const focusAnimation = useRef(new Animated.Value(0)).current;
-  const inputBarTranslateY = useRef(new Animated.Value(0)).current;
+  const screenRootRef = useRef<View | null>(null);
+  const inputSlotRef = useRef<View | null>(null);
+  const inputTextRef = useRef<TextInput | null>(null);
+  const inputContentTop = useRef(0);
+  const scrollOffset = useRef(0);
+  const scrimOpacity = useRef(new Animated.Value(0)).current;
+  const isLeavingTextMode = useRef(false);
+  const [inputFrame, setInputFrame] = useState({ top: 0, left: 0, width: 0, height: 54 });
   const [cameraDenied, setCameraDenied] = useState(false);
-
-  useEffect(() => {
-    if (!textMode) return;
-
-    focusAnimation.setValue(0);
-    const frame = requestAnimationFrame(() => {
-      const sourceY = inputBarStartY.current;
-      const inputCard = focusedInputCardRef.current;
-
-      const animateFrom = (translateY: number) => {
-        focusStartOffset.current = translateY;
-        inputBarTranslateY.setValue(translateY);
-        Animated.parallel([
-          Animated.timing(focusAnimation, {
-            toValue: 1,
-            duration: 340,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
-          Animated.timing(inputBarTranslateY, {
-            toValue: 0,
-            duration: 380,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
-        ]).start();
-      };
-
-      if (sourceY === null || !inputCard) {
-        animateFrom(-72);
-        return;
-      }
-      inputCard.measureInWindow((_x, targetY) => {
-        animateFrom(sourceY - targetY);
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(frame);
-      focusAnimation.stopAnimation();
-      inputBarTranslateY.stopAnimation();
-    };
-  }, [focusAnimation, inputBarTranslateY, textMode]);
 
   const canSubmit = (!!imageUri || text.trim().length >= 3) && !loading;
 
   const goHome = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-  const leaveTextMode = () => {
-    focusAnimation.stopAnimation();
-    inputBarTranslateY.stopAnimation();
-    Animated.parallel([
-      Animated.timing(focusAnimation, {
-        toValue: 0,
-        duration: 320,
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(inputBarTranslateY, {
-        toValue: focusStartOffset.current,
-        duration: 380,
-        easing: Easing.inOut(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
-      if (!finished) return;
-      Keyboard.dismiss();
-      setTextMode(false);
-    });
+  const onWheelChange = (nextCategory: Category, source: 'swipe' | 'tap') => {
+    setCategory(nextCategory);
+    if (source === 'tap') setAuto(false);
   };
 
   const enterTextMode = () => {
-    const inputBar = inputBarRef.current;
-    if (!inputBar) {
-      inputBarStartY.current = null;
-      setTextMode(true);
-      return;
-    }
-    inputBar.measureInWindow((_x, y) => {
-      inputBarStartY.current = y;
-      setTextMode(true);
+    if (focusOverlayMounted) return;
+    isLeavingTextMode.current = false;
+    scrimOpacity.stopAnimation();
+    scrimOpacity.setValue(0);
+    setFocusOverlayMounted(true);
+    requestAnimationFrame(() => {
+      Animated.timing(scrimOpacity, {
+        toValue: 0.88,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+  };
+
+  const leaveTextMode = () => {
+    if (!focusOverlayMounted || isLeavingTextMode.current) return;
+    isLeavingTextMode.current = true;
+    inputTextRef.current?.blur();
+    Keyboard.dismiss();
+    scrimOpacity.stopAnimation();
+    Animated.timing(scrimOpacity, {
+      toValue: 0,
+      duration: 220,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) return;
+      setFocusOverlayMounted(false);
+      isLeavingTextMode.current = false;
+    });
+  };
+
+  const measureInputSlot = () => {
+    const screenRoot = screenRootRef.current;
+    const inputSlot = inputSlotRef.current;
+    if (!screenRoot || !inputSlot) return;
+
+    screenRoot.measureInWindow((rootX, rootY) => {
+      inputSlot.measureInWindow((x, y, width, height) => {
+        inputContentTop.current = y - rootY + scrollOffset.current;
+        setInputFrame({ top: inputContentTop.current - scrollOffset.current, left: x - rootX, width, height });
+      });
     });
   };
 
@@ -209,11 +183,6 @@ export default function AssistantScreen() {
     }
   };
 
-  const onWheelChange = (c: Category) => {
-    setCategory(c);
-    setAuto(false);
-  };
-
   const askButton = (
     <PrimaryButton label="Ask Relast" onPress={submit} disabled={!canSubmit} loading={loading} />
   );
@@ -226,31 +195,24 @@ export default function AssistantScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' && !textMode ? 'padding' : undefined}>
+      <View ref={screenRootRef} style={styles.screen}>
         <View style={styles.header}>
           <View style={{ width: 40 }} />
           <Text style={styles.title}>{TITLES[category]}</Text>
           <View style={{ width: 40 }} />
         </View>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <Animated.View
-            ref={inputBarRef}
-            pointerEvents={textMode ? 'none' : 'auto'}
-            style={[styles.inputCard, { opacity: focusAnimation.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}>
-            <TextInput
-              multiline
-              style={styles.input}
-              underlineColorAndroid="transparent"
-              placeholder={PLACEHOLDER}
-              placeholderTextColor={Palette.muted}
-              value={text}
-              onChangeText={setText}
-              onFocus={enterTextMode}
-              editable={!loading}
-              textAlignVertical="top"
-            />
-          </Animated.View>
-
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            scrollOffset.current = event.nativeEvent.contentOffset.y;
+            setInputFrame((frame) => ({ ...frame, top: inputContentTop.current - scrollOffset.current }));
+          }}>
+          <View ref={inputSlotRef} onLayout={measureInputSlot} style={styles.inputSlot} />
           <View style={styles.frame} accessibilityLabel={imageUri ? 'Selected photo' : 'Camera frame'}>
             {imageUri ? (
               <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -275,69 +237,55 @@ export default function AssistantScreen() {
           )}
 
           <View style={styles.wheelRow}>
-            <CircleButton icon="close" label="Close" onPress={goHome} />
             <CategoryWheel value={category} onChange={onWheelChange} onSelectedPress={takePhoto} dimmed={auto} />
-            <CircleButton icon="images-outline" label="Gallery" onPress={pickFromLibrary} filled />
           </View>
 
           <Text style={styles.blurb}>{auto ? 'Relast will figure out the category' : CATEGORY_META[category].blurb}</Text>
-          <Pressable
-            onPress={() => setAuto((a) => !a)}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: auto }}
-            style={[styles.autoChip, auto && styles.autoChipOn]}>
-            <Ionicons name="sparkles-outline" size={16} color={auto ? Palette.white : Palette.forest} />
-            <Text style={[styles.autoText, auto && { color: Palette.white }]}>Auto-detect</Text>
-          </Pressable>
+          <View style={styles.autoRow}>
+            <CircleButton icon="close" label="Close" onPress={goHome} size={48} alignIconToCenter />
+            <Pressable
+              onPress={() => setAuto((a) => !a)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: auto }}
+              style={[styles.autoChip, auto && styles.autoChipOn]}>
+              <Ionicons name="sparkles-outline" size={16} color={auto ? Palette.white : Palette.forest} />
+              <Text style={[styles.autoText, auto && { color: Palette.white }]}>Auto-detect</Text>
+            </Pressable>
+            <CircleButton icon="images-outline" label="Gallery" onPress={pickFromLibrary} size={48} filled alignIconToCenter />
+          </View>
         </ScrollView>
 
         <View style={styles.bottom}>
           {errorBox}
           {askButton}
         </View>
-      </KeyboardAvoidingView>
-      {textMode && (
-        <View style={styles.focusOverlay}>
-          <Animated.View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, styles.focusScrim, { opacity: focusAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 0.88] }) }]}
+        {focusOverlayMounted && (
+          <View style={styles.focusOverlay}>
+            <Animated.View pointerEvents="none" style={[styles.focusScrim, { opacity: scrimOpacity }]} />
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={leaveTextMode}
+              accessibilityRole="button"
+              accessibilityLabel="Return to assistant"
+            />
+          </View>
+        )}
+        <View style={[styles.inputCard, styles.inputLayer, inputFrame]}>
+          <TextInput
+            ref={inputTextRef}
+            multiline
+            style={styles.input}
+            underlineColorAndroid="transparent"
+            placeholder={PLACEHOLDER}
+            placeholderTextColor={Palette.muted}
+            value={text}
+            onChangeText={setText}
+            onFocus={enterTextMode}
+            editable={!loading}
+            textAlignVertical="top"
           />
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={leaveTextMode}
-            accessibilityRole="button"
-            accessibilityLabel="Return to assistant"
-          />
-          <KeyboardAvoidingView style={styles.focusAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : undefined} pointerEvents="box-none">
-            <View style={styles.focusContent} pointerEvents="box-none">
-              <Animated.View
-                style={[
-                  styles.focusInputCard,
-                  {
-                    opacity: focusAnimation,
-                    transform: [{ translateY: inputBarTranslateY }],
-                  },
-                ]}
-                pointerEvents="box-none"
-                ref={focusedInputCardRef}>
-                <TextInput
-                  ref={focusedInputRef}
-                  autoFocus
-                  multiline
-                  style={styles.focusInput}
-                  underlineColorAndroid="transparent"
-                  placeholder={PLACEHOLDER}
-                  placeholderTextColor={Palette.muted}
-                  value={text}
-                  onChangeText={setText}
-                  textAlignVertical="center"
-                  editable={!loading}
-                />
-              </Animated.View>
-            </View>
-          </KeyboardAvoidingView>
         </View>
-      )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -353,8 +301,11 @@ function Pill({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; 
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.cream },
+  screen: { flex: 1, position: 'relative' },
   scroll: { padding: 20, gap: 14, flexGrow: 1 },
+  inputSlot: { height: 54 },
   inputCard: { flexDirection: 'row', gap: 10, backgroundColor: Palette.card, borderRadius: 20, borderWidth: 1, borderColor: Palette.border, paddingHorizontal: 14, paddingVertical: 7, alignItems: 'center', minHeight: 54 },
+  inputLayer: { position: 'absolute', zIndex: 11 },
   input: { flex: 1, minHeight: 38, maxHeight: 86, fontSize: 16, color: Palette.ink, outlineColor: 'transparent', outlineWidth: 0 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 4 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -370,8 +321,9 @@ const styles = StyleSheet.create({
   previewActions: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
   pill: { flexDirection: 'row', gap: 5, alignItems: 'center', backgroundColor: Palette.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   pillText: { color: Palette.forest, fontWeight: '600', fontSize: 13 },
-  wheelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  wheelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   blurb: { textAlign: 'center', color: Palette.muted, fontSize: 15 },
+  autoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   autoChip: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, borderWidth: 1.5, borderColor: Palette.mintDeep, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: Palette.card },
   autoChipOn: { backgroundColor: Palette.forest, borderColor: Palette.forest },
   autoText: { color: Palette.forest, fontWeight: '600', fontSize: 14 },
@@ -379,9 +331,5 @@ const styles = StyleSheet.create({
   errorBox: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: Palette.dangerBg, borderRadius: 14, padding: 12 },
   errorText: { color: Palette.danger, flex: 1, fontSize: 14 },
   focusOverlay: { ...StyleSheet.absoluteFill, zIndex: 10 },
-  focusScrim: { backgroundColor: Palette.ink },
-  focusAvoiding: { flex: 1, paddingHorizontal: 20 },
-  focusContent: { flex: 1, justifyContent: 'center', paddingBottom: 12 },
-  focusInputCard: { minHeight: 56, maxHeight: 120, flexDirection: 'row', alignItems: 'center', backgroundColor: Palette.card, borderRadius: 20, borderWidth: 1, borderColor: Palette.border, paddingHorizontal: 14, paddingVertical: 8 },
-  focusInput: { flex: 1, minHeight: 38, maxHeight: 104, fontSize: 16, color: Palette.ink, outlineColor: 'transparent', outlineWidth: 0 },
+  focusScrim: { ...StyleSheet.absoluteFill, backgroundColor: Palette.ink },
 });

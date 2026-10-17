@@ -9,11 +9,12 @@ interface Props {
   onPress: () => void;
   size?: number;
   filled?: boolean;
+  alignIconToCenter?: boolean;
 }
 
-export function CircleButton({ icon, label, onPress, size = 60, filled }: Props) {
+export function CircleButton({ icon, label, onPress, size = 60, filled, alignIconToCenter = false }: Props) {
   return (
-    <View style={{ alignItems: 'center', gap: 6 }}>
+    <View style={[styles.wrap, alignIconToCenter && styles.iconCentered]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -32,6 +33,8 @@ export function CircleButton({ icon, label, onPress, size = 60, filled }: Props)
 }
 
 const styles = StyleSheet.create({
+  wrap: { alignItems: 'center', gap: 6 },
+  iconCentered: { transform: [{ translateY: 10 }] },
   btn: {
     backgroundColor: Palette.card,
     borderWidth: 2,
