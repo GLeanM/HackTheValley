@@ -6,7 +6,7 @@ import { AiError, type AiProvider, type AiRequest, type AiResponse } from './typ
  * Set EXPO_PUBLIC_RELAST_API_URL to enable. Not active while the URL is unset.
  *
  * Contract: POST {url}/ask  (multipart/form-data)
- *   text: string, category: 'auto'|'food'|'sorter'|'lifecycle', image?: file
+ *   text: string, category: 'auto'|'food'|'sorter'|'lifecycle', hint?: string, image?: file
  * Response: JSON matching AiResponse (see parse.ts) minus `source`.
  */
 export function createGeminiProvider(baseUrl: string): AiProvider {
@@ -16,6 +16,7 @@ export function createGeminiProvider(baseUrl: string): AiProvider {
       const form = new FormData();
       form.append('text', request.text);
       form.append('category', request.category);
+      if (request.hint) form.append('hint', request.hint);
       if (request.imageUri) {
         // React Native's FormData accepts { uri, name, type } file descriptors.
         form.append('image', {

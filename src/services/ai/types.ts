@@ -6,6 +6,8 @@ export interface AiRequest {
   text: string;
   imageUri: string | null;
   category: CategoryChoice;
+  /** What the image classifier saw (e.g. "plastic"), so the text model's answer agrees with it. */
+  hint?: string;
 }
 
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
@@ -35,8 +37,18 @@ export interface AiResponse {
   reuse?: { possible: boolean; ideas: string[] };
   lifecycle?: { estimate: string; repairs: string[]; donation: string[] };
   recipes?: Recipe[];
+  /** Set when the trash-classifier model picked `bin` (see classifier.ts). */
+  classifier?: ClassifierResult;
   /** Which provider produced this — never claim Gemini for mock output. */
   source: 'mock' | 'gemini';
+}
+
+export interface ClassifierResult {
+  model: string;
+  label: string;
+  /** Top-1 probability, 0–1. */
+  score: number;
+  bin: BinType;
 }
 
 export interface AiProvider {

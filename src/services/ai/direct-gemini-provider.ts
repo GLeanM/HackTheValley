@@ -1,3 +1,4 @@
+import { toDataUrl } from './image';
 import { parseAiResponse } from './parse';
 import { AiError, type AiProvider, type AiRequest, type AiResponse } from './types';
 
@@ -13,6 +14,7 @@ Identify the item and say how to dispose of it, whether it can be reused, and ho
 - recommendations / alternatives: short actionable strings.
 - lifecycle (only for category "lifecycle"): estimate, repairs, donation. recipes (only for "food"): title, time, ingredients, steps.
 - confidence.level is low|medium|high; be honest if the photo is unclear.
+- A "Hint" comes from an image classifier: use it to name the item and pick the bin unless the photo clearly shows otherwise.
 Never invent certainty. Keep every string short.`;
 
 const strArray = { type: 'array', items: { type: 'string' } };
@@ -51,17 +53,6 @@ const RESPONSE_SCHEMA = {
   required: ['category', 'itemName', 'answer', 'why', 'recommendations', 'alternatives', 'confidence'],
 };
 
-/** Reads a local image URI as base64 (no extra native dependency). */
-async function toBase64(uri: string): Promise<string> {
-  const blob = await (await fetch(uri)).blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('read failed'));
-    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
-    reader.readAsDataURL(blob);
-  });
-}
-
 /**
  * Calls Gemini straight from the app. The key is bundled with the app and extractable,
  * so use this for demos only — prefer the backend provider for anything real.
@@ -73,9 +64,10 @@ export function createDirectGeminiProvider(apiKey: string, model = DEFAULT_MODEL
       const parts: object[] = [
         { text: `Category: ${request.category}\nUser says: ${request.text || '(nothing — identify the item in the photo)'}` },
       ];
+      if (request.hint) parts.push({ text: `Hint: ${request.hint}` });
       if (request.imageUri) {
         try {
-          parts.push({ inline_data: { mime_type: 'image/jpeg', data: await toBase64(request.imageUri) } });
+          parts.push({ inline_data: { mime_type: 'image/jpeg', data: (await toDataUrl(request.imageUri)).split(',')[1] ?? '' } });
         } catch {
           throw new AiError('We could not read that photo. Please try another one.');
         }
