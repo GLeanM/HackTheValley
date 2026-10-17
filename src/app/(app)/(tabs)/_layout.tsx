@@ -1,8 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import { useState } from 'react';
+import { router, Tabs } from 'expo-router';
 
-import { CameraCheck } from '@/components/relast/camera-check';
 import { Palette } from '@/constants/palette';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -12,9 +10,7 @@ const icon = (name: IconName) =>
   };
 
 export default function TabsLayout() {
-  const [camCheck, setCamCheck] = useState(false);
   return (
-    <>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -31,13 +27,11 @@ export default function TabsLayout() {
         listeners={{
           tabPress: (e) => {
             e.preventDefault();
-            setCamCheck(true);
+            router.navigate('/assistant');
           },
         }}
       />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: icon('person-outline') }} />
     </Tabs>
-    <CameraCheck visible={camCheck} onClose={() => setCamCheck(false)} />
-    </>
   );
 }
