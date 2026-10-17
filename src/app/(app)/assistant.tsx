@@ -2,12 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryWheel } from '@/components/relast/category-wheel';
 import { CircleButton } from '@/components/relast/circle-button';
+import { LiveCamera } from '@/components/relast/live-camera';
 import { PrimaryButton } from '@/components/relast/primary-button';
 import { WebCamera } from '@/components/relast/web-camera';
 import { Palette } from '@/constants/palette';
@@ -35,8 +36,7 @@ export default function AssistantScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
-  const cameraBusy = useRef(false);
-  const [webCam, setWebCam] = useState(false);
+  const [camOpen, setCamOpen] = useState(false);
 
   const canSubmit = (!!imageUri || text.trim().length >= 3) && !loading;
 
@@ -51,16 +51,6 @@ export default function AssistantScreen() {
     }
   };
 
-  // Android may kill this activity while the system camera is open; the photo is then delivered on relaunch.
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    ImagePicker.getPendingResultAsync()
-      .then((pending) => {
-        if (pending && 'canceled' in pending && !pending.canceled && pending.assets?.[0]) setImageUri(pending.assets[0].uri);
-      })
-      .catch(() => {});
-  }, []);
-
   const offerLibrary = (message: string) => {
     // RN-web's Alert.alert is a no-op.
     if (Platform.OS === 'web') {
@@ -73,34 +63,14 @@ export default function AssistantScreen() {
     ]);
   };
 
-  const takePhoto = async () => {
-    // Browser (e.g. MacBook webcam): the system camera sheet doesn't exist, so use getUserMedia.
-    if (Platform.OS === 'web') {
-      setWebCam(true);
-      return;
-    }
-    if (cameraBusy.current) return;
-    cameraBusy.current = true;
-    try {
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) {
-        offerLibrary('Camera access is off. Choose a photo from your device instead?');
-        return;
-      }
-      const res = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        quality: 0.5,
-        allowsEditing: false,
-        exif: false,
-        base64: false,
-      });
-      if (!res.canceled && res.assets?.[0]) setImageUri(res.assets[0].uri);
-    } catch {
-      // Camera unavailable (e.g. simulator): offer the library instead.
-      offerLibrary('We could not open the camera. Choose a photo from your device instead?');
-    } finally {
-      cameraBusy.current = false;
-    }
+  const takePhoto = () => setCamOpen(true);
+  const onCaptured = (uri: string) => {
+    setImageUri(uri);
+    setCamOpen(false);
+  };
+  const onCamUnavailable = (message: string) => {
+    setCamOpen(false);
+    offerLibrary(message);
   };
 
   const submit = async () => {
@@ -243,19 +213,10 @@ export default function AssistantScreen() {
           {askButton}
         </View>
       </KeyboardAvoidingView>
-      {Platform.OS === 'web' && (
-        <WebCamera
-          visible={webCam}
-          onClose={() => setWebCam(false)}
-          onCapture={(uri) => {
-            setImageUri(uri);
-            setWebCam(false);
-          }}
-          onUnavailable={(message) => {
-            setWebCam(false);
-            offerLibrary(message);
-          }}
-        />
+      {Platform.OS === 'web' ? (
+        <WebCamera visible={camOpen} onClose={() => setCamOpen(false)} onCapture={onCaptured} onUnavailable={onCamUnavailable} />
+      ) : (
+        <LiveCamera visible={camOpen} onClose={() => setCamOpen(false)} onCapture={onCaptured} onUnavailable={onCamUnavailable} />
       )}
     </SafeAreaView>
   );
