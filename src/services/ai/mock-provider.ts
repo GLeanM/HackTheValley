@@ -95,7 +95,11 @@ function build(req: AiRequest, cat: Category, guessed: boolean): AiResponse {
       level: guessed ? 'low' : level,
       note: guessed ? NOTE_GUESS : NOTE_LOCAL,
     },
-    bin: 'unsure',
+    bin: 'recycling',
+    reuse: {
+      possible: true,
+      ideas: ['Store leftovers or meal-prep lunches', 'Organize screws, beads or craft supplies', 'Start seedlings in it as a mini planter'],
+    },
   };
 }
 

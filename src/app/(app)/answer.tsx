@@ -11,11 +11,13 @@ import { Palette } from '@/constants/palette';
 import { CATEGORY_META, type BinType } from '@/services/ai';
 import { useApp } from '@/state/app-context';
 
-const BIN_LABEL: Record<BinType, string> = {
-  recycling: 'Recycling bin',
-  garbage: 'Garbage',
-  compost: 'Compost / green bin',
-  unsure: 'Not sure yet — check local rules',
+const BIN_BADGE: Record<BinType, { label: string; icon: keyof typeof Ionicons.glyphMap; bg: string }> = {
+  recycling: { label: 'Recycle', icon: 'refresh-circle-outline', bg: Palette.mintDeep },
+  garbage: { label: 'Landfill', icon: 'trash-outline', bg: Palette.sand },
+  compost: { label: 'Compost', icon: 'leaf-outline', bg: Palette.mint },
+  hazardous: { label: 'Hazardous', icon: 'warning-outline', bg: Palette.dangerBg },
+  ewaste: { label: 'E-waste', icon: 'hardware-chip-outline', bg: Palette.sand },
+  unsure: { label: 'Check local rules', icon: 'help-circle-outline', bg: Palette.sand },
 };
 
 export default function AnswerScreen() {
@@ -56,7 +58,15 @@ export default function AnswerScreen() {
           </View>
         )}
 
-        <Text style={styles.h1}>{r.itemName}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.h1, { flex: 1 }]}>{r.itemName}</Text>
+          {r.bin && (
+            <View style={[styles.binBadge, { backgroundColor: BIN_BADGE[r.bin].bg }]} accessibilityLabel={`Goes in: ${BIN_BADGE[r.bin].label}`}>
+              <Ionicons name={BIN_BADGE[r.bin].icon} size={16} color={Palette.forestDark} />
+              <Text style={styles.binText}>{BIN_BADGE[r.bin].label}</Text>
+            </View>
+          )}
+        </View>
         <View style={styles.chips}>
           <Text style={[styles.chip, { backgroundColor: Palette.mintDeep }]}>{meta.label}</Text>
           <Text style={[styles.chip, { backgroundColor: Palette.sand }]}>Confidence: {r.confidence.level}</Text>
@@ -69,15 +79,22 @@ export default function AnswerScreen() {
           <Text style={styles.body}>{r.answer}</Text>
         </Card>
 
-        {r.bin && (
-          <Card tint>
+        {r.reuse && (
+          <Card tint={r.reuse.possible}>
             <View style={styles.row}>
-              <Ionicons name="trash-outline" size={26} color={Palette.forest} />
+              <Ionicons name="repeat-outline" size={26} color={Palette.forest} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Where it goes</Text>
-                <Text style={styles.big}>{BIN_LABEL[r.bin]}</Text>
+                <Text style={styles.label}>Reusable?</Text>
+                <Text style={styles.big}>{r.reuse.possible ? 'Yes — give it another life' : 'Not really reusable'}</Text>
               </View>
             </View>
+            {r.reuse.possible &&
+              r.reuse.ideas.map((t) => (
+                <View key={t} style={styles.row}>
+                  <Ionicons name="leaf-outline" size={18} color={Palette.leaf} style={{ marginTop: 3 }} />
+                  <Text style={[styles.body, { flex: 1 }]}>{t}</Text>
+                </View>
+              ))}
           </Card>
         )}
 
@@ -177,6 +194,9 @@ const styles = StyleSheet.create({
   scroll: { padding: 20, gap: 14 },
   image: { width: '100%', height: 200, borderRadius: 24 },
   imageFallback: { backgroundColor: Palette.mint, alignItems: 'center', justifyContent: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  binBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  binText: { fontSize: 14, fontWeight: '700', color: Palette.forestDark },
   chips: { flexDirection: 'row', gap: 8 },
   chip: { fontSize: 13, fontWeight: '600', color: Palette.forestDark, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5, overflow: 'hidden' },
   mascotRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
