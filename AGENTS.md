@@ -36,6 +36,7 @@ Login → Home → Assistant (text / photo / category) → Answer → Ask again 
 **This is an npm project** — only `package-lock.json` exists. Use `npx`, never `bunx`.
 
 ```bash
+npm install && npm run build:model  # first-time setup; build:model needs Python 3 (see README / §6)
 npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm add — resolves SDK-compatible versions
 npx expo start              # dev server (= npm start)
 npx expo lint               # lint (= npm run lint)
@@ -121,6 +122,9 @@ danger #B3402F   dangerBg #FBE9E5
 | `mock-provider.ts` | Canned responses with a 1.2s delay. |
 | `gemini-provider.ts` | Talks to **our** backend, never to Gemini directly. |
 | `parse.ts` | Defensively validates untrusted backend JSON. |
+| `classifier.ts` | Label → `BinType` map + confidence rule; calls the fallback classifier server in `server/` (`POST /classify`). |
+| `on-device-classifier.ts` | Bridge to the on-device model in `public/classifier.html` (postMessage, 15 s timeout). |
+| `image.ts` | `toDataUrl(uri)` shared by Gemini + classifier. |
 
 **Rules:**
 
@@ -133,6 +137,10 @@ danger #B3402F   dangerBg #FBE9E5
   No `.env` exists, so this always resolves to `mockProvider`.
 - **No Gemini API key ever goes in this repo.** The key lives in a backend that does not exist yet. The contract `gemini-provider.ts` expects:
   `POST {EXPO_PUBLIC_RELAST_API_URL}/ask` as `multipart/form-data` with `text`, `category` (`auto|food|sorter|lifecycle`), optional `image` file → JSON matching `AiResponse` minus `source`.
+- **Trash classifier (Sorter):** `index.ts` always wraps the text provider. For `sorter`/`auto` requests with a photo it tries, in order: (1) **on-device**: `public/classifier.html` runs `dima806/garbage_types_image_detection` (int8 ONNX) with Transformers.js. `src/components/relast/classifier-host` mounts it in a hidden iframe on web or a hidden WebView on native, from `(app)/_layout.tsx`. (2) The **server** at `EXPO_PUBLIC_RELAST_CLASSIFIER_URL` (`server/`), if set. (3) Nothing. A confident result sets `bin` and `classifier` on the response and is passed to the text provider as `AiRequest.hint`. An `unsure` result or a failure moves on to the next option silently.
+  - Model + runtime files in `public/models/` and `public/vendor/` are **gitignored**: run `npm run build:model` after cloning (needs Python 3; produces ~90 MB model + ~75 MB wasm).
+  - Native loads the page from the Expo dev server (`Constants.expoConfig.hostUri`), so on-device works in Expo Go/dev only. A native production build has no host, so it falls back to the server or plain answer.
+  - The label → bin map and the floor-0.2 / margin-1.5 rule exist in both `classifier.ts` and `server/app.py`. Keep them in sync.
 - Every response carries `source: 'mock' | 'gemini'` so the UI can stay honest. Keep that discriminator.
 - `AiResponse` is the contract: `category`, `itemName`, `question`, `answer`, `why`, `recommendations[]`, `alternatives[]`, `confidence {level, note}`, plus optional `bin`, `lifecycle`, `recipes`. **Changing its shape means touching `types.ts`, `parse.ts`, `mock-provider.ts`, and `answer.tsx` together.**
 - Errors are thrown as `AiError` with a user-facing message; screens catch it and render the message.
@@ -204,8 +212,8 @@ These are untouched `create-expo-app` leftovers, **unreferenced by any route**:
 - `src/components/{themed-text,themed-view,hint-row,web-badge,external-link,animated-icon*}.tsx`, `src/components/ui/collapsible.tsx`
 - `src/constants/theme.ts`, `src/global.css`, `src/hooks/use-theme.ts`, `src/hooks/use-color-scheme*.ts`
 - Many assets: `react-logo*`, `expo-logo`, `expo-badge*`, `tutorial-web`, `logo-glow`, `assets/images/tabIcons/*`
-- Unused dependencies: `@expo/ui`, `expo-constants`, `expo-device`, `expo-font`, `expo-glass-effect`, `expo-linking`, `expo-system-ui`, `react-native-url-polyfill`, `@supabase/supabase-js`
-- `README.md` is boilerplate.
+- Unused dependencies: `@expo/ui`, `expo-device`, `expo-font`, `expo-glass-effect`, `expo-linking`, `expo-system-ui`, `react-native-url-polyfill`, `@supabase/supabase-js`
+- `README.md` is the human-facing setup guide (install, `build:model`, env vars). Keep it in sync with §2 and §6.
 
 **`src/constants/theme.ts` is NOT the app's theme — `src/constants/palette.ts` is.**
 
