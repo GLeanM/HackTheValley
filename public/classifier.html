@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Relast classifier</title>
+  </head>
+  <body>
+    <!--
+      On-device trash classifier. Loaded invisibly by src/components/relast/classifier-host
+      (an iframe on web, a WebView on native). Model + runtime come from this origin only;
+      generate them with `npm run build:model`.
+
+      In:  {type:'classify', id, image: dataURL}  via window.relastClassify(msg) or postMessage
+      Out: {type:'ready'} | {type:'error', message} | {type:'result', id, top?: [{label, score}], error?}
+    -->
+    <script type="module">
+      const MODEL_ID = 'dima806/garbage_types_image_detection';
+
+      const post = (msg) => {
+        const data = JSON.stringify(msg);
+        if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(data);
+        else window.parent.postMessage(data, '*');
+      };
+
+      let classifier = null;
+
+      async function load() {
+        const { pipeline, env } = await import('/vendor/transformers.min.js');
+        env.allowRemoteModels = false;
+        env.allowLocalModels = true;
+        env.localModelPath = '/models/';
+        env.backends.onnx.wasm.wasmPaths = '/vendor/';
+        // No cross-origin isolation in an iframe/WebView, so threads are unavailable.
+        env.backends.onnx.wasm.numThreads = 1;
+        classifier = await pipeline('image-classification', MODEL_ID, { dtype: 'q8', device: 'wasm' });
+        post({ type: 'ready' });
+      }
+
+      async function classify({ id, image }) {
+        try {
+          if (!classifier) throw new Error('Model is not loaded yet.');
+          const top = await classifier(image, { top_k: 2 });
+          post({ type: 'result', id, top });
+        } catch (e) {
+          post({ type: 'result', id, error: String(e) });
+        }
+      }
+
+      window.relastClassify = classify;
+      window.addEventListener('message', (event) => {
+        let msg;
+        try {
+          msg = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        } catch {
+          return;
+        }
+        if (msg && msg.type === 'classify') classify(msg);
+      });
+
+      load().catch((e) => post({ type: 'error', message: String(e) }));
+    </script>
+  </body>
+</html>

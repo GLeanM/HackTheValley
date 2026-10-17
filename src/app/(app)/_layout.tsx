@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 
+import { ClassifierHost } from '@/components/relast/classifier-host';
 import { Palette } from '@/constants/palette';
 
 export default function AppLayout() {
