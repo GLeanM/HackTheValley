@@ -113,14 +113,15 @@ danger #B3402F   dangerBg #FBE9E5
 
 ## 6. The AI layer (`src/services/ai/`)
 
-> **The real Gemini integration is NOT active.** Every response today comes from the mock provider. `answer.tsx` honestly labels it *"Sample answer — the live AI isn’t connected yet."* Never tell the user Gemini is wired up.
+> **Gemini is live when `EXPO_PUBLIC_GEMINI_API_KEY` is set in `.env`** (gitignored). The app then calls Gemini directly (`direct-gemini-provider.ts`, model `gemini-3.5-flash-lite`). Without a key or backend URL every answer comes from the mock provider, and `answer.tsx` labels it *"Sample answer — the live AI isn’t connected yet."*
 
 | File | Role |
 | --- | --- |
 | `index.ts` | Barrel + provider selection. |
 | `types.ts` | All AI types and the shared `CATEGORY_META` / `CATEGORIES` constants. |
 | `mock-provider.ts` | Canned responses with a 1.2s delay. |
-| `gemini-provider.ts` | Talks to **our** backend, never to Gemini directly. |
+| `gemini-provider.ts` | Talks to **our** backend (`EXPO_PUBLIC_RELAST_API_URL`), never to Gemini directly. |
+| `direct-gemini-provider.ts` | Calls Gemini straight from the app with the `.env` key. Holds the per-category `SYSTEM_PROMPT` and JSON `RESPONSE_SCHEMA`. |
 | `parse.ts` | Defensively validates untrusted backend JSON. |
 | `classifier.ts` | Label → `BinType` map + confidence rule; calls the fallback classifier server in `server/` (`POST /classify`). |
 | `on-device-classifier.ts` | Bridge to the on-device model in `public/classifier.html` (postMessage, 15 s timeout). |
@@ -130,12 +131,8 @@ danger #B3402F   dangerBg #FBE9E5
 
 - **Always import from the barrel `@/services/ai`** — never from `./mock-provider` or `./types` from outside the directory.
 - Provider is chosen at module load in `index.ts`:
-  ```ts
-  const apiUrl = process.env.EXPO_PUBLIC_RELAST_API_URL;
-  export const aiProvider: AiProvider = apiUrl ? createGeminiProvider(apiUrl) : mockProvider;
-  ```
-  No `.env` exists, so this always resolves to `mockProvider`.
-- **No Gemini API key ever goes in this repo.** The key lives in a backend that does not exist yet. The contract `gemini-provider.ts` expects:
+`EXPO_PUBLIC_RELAST_API_URL` (backend) wins, then `EXPO_PUBLIC_GEMINI_API_KEY` (direct Gemini), else `mockProvider`. Expo reads `.env` only at startup, so restart `npx expo start` after changing it.
+- **Never commit the Gemini key.** It lives only in the gitignored `.env`. Any `EXPO_PUBLIC_` value is bundled into the web site and app, so it's extractable: this is demo-grade, and the key should be restricted or rotated after the event. The long-term plan is a backend; the contract `gemini-provider.ts` expects:
   `POST {EXPO_PUBLIC_RELAST_API_URL}/ask` as `multipart/form-data` with `text`, `category` (`auto|food|sorter|lifecycle`), optional `image` file → JSON matching `AiResponse` minus `source`.
 - **Trash classifier (Sorter):** `index.ts` always wraps the text provider. For `sorter`/`auto` requests with a photo it tries, in order: (1) **on-device**: `public/classifier.html` runs `dima806/garbage_types_image_detection` (int8 ONNX) with Transformers.js. `src/components/relast/classifier-host` mounts it in a hidden iframe on web or a hidden WebView on native, from `(app)/_layout.tsx`. (2) The **server** at `EXPO_PUBLIC_RELAST_CLASSIFIER_URL` (`server/`), if set. (3) Nothing. A confident result sets `bin` and `classifier` on the response and is passed to the text provider as `AiRequest.hint`. An `unsure` result or a failure moves on to the next option silently.
   - Model + runtime files in `public/models/` and `public/vendor/` are **gitignored**: run `npm run build:model` after cloning (needs Python 3; produces ~90 MB model + ~75 MB wasm).
@@ -145,6 +142,7 @@ danger #B3402F   dangerBg #FBE9E5
 - `AiResponse` is the contract: `category`, `itemName`, `question`, `answer`, `why`, `recommendations[]`, `alternatives[]`, `confidence {level, note}`, plus optional `bin`, `lifecycle`, `recipes`. **Changing its shape means touching `types.ts`, `parse.ts`, `mock-provider.ts`, and `answer.tsx` together.**
 - Errors are thrown as `AiError` with a user-facing message; screens catch it and render the message.
 - **Dev trigger:** typing text matching `/\/error/i` in the assistant makes the mock provider throw — that's how you exercise the error state.
+- **Category answers come from the prompt in `direct-gemini-provider.ts`.** Lifecycle fills `lifecycle {estimate, repairs, donation}`, `reuse`, care-tip `recommendations` and repurpose/disposal `alternatives`. Food fills `recipes`, storage `recommendations` and non-trash `alternatives`. Change what the screens show there, not in `answer.tsx`.
 - Don't present uncertain guesses as facts. Recycling advice is location-dependent; the `confidence.note` field exists for exactly that caveat.
 
 ---
@@ -188,7 +186,7 @@ Match what the code already does:
 Full login → home → assistant → answer → profile journey; the rotating `CategoryWheel` (Reanimated + Gesture Handler, really interactive, not decorative); camera with image-library fallback on permission denial; image preview with change/remove before submit; disabled-until-valid submit with a loading state and an `inFlight` ref guarding duplicate submissions; error rendering; history persisted and listed newest-first; tapping a history row reopens its saved answer.
 
 ### Deliberately stubbed — do not "fix" without being asked
-Mock AI responses · mock auth · placeholder `Mascot` (nested `View`s, not art) · `scan.tsx` returning `null` · "Sustainability games coming soon" card · `supabase/` with only `config.toml` · placeholder assets throughout.
+Mock AI responses (only when no Gemini key is set) · mock auth · placeholder `Mascot` (nested `View`s, not art) · `scan.tsx` returning `null` · "Sustainability games coming soon" card · `supabase/` with only `config.toml` · placeholder assets throughout.
 
 ### Actually broken — the app will not bundle as committed
 Flag these to the user before claiming a change runs:
