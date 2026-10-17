@@ -14,7 +14,7 @@ import { Palette } from '@/constants/palette';
 import { aiProvider, CATEGORIES, CATEGORY_META, type Category } from '@/services/ai';
 import { useApp } from '@/state/app-context';
 
-const PLACEHOLDER = 'What is this, and how can I use it sustainably?';
+const PLACEHOLDER = 'Add some text!';
 
 const TITLES: Record<Category, string> = {
   lifecycle: 'Give it a second life',
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 4 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '700', color: Palette.forestDark },
-  frame: { height: 210, borderRadius: 24, overflow: 'hidden', backgroundColor: Palette.sand },
+  frame: { flexGrow: 1, minHeight: 210, borderRadius: 24, overflow: 'hidden', backgroundColor: Palette.sand },
   framePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   frameHint: { color: Palette.muted, fontSize: 14, fontWeight: '600' },
   corner: { position: 'absolute', width: 30, height: 30, borderColor: Palette.leaf, borderWidth: 0 },
