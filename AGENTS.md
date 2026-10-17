@@ -36,6 +36,7 @@ Login → Home → Assistant (text / photo / category) → Answer → Ask again 
 **This is an npm project** — only `package-lock.json` exists. Use `npx`, never `bunx`.
 
 ```bash
+npm install && npm run build:model  # first-time setup; build:model needs Python 3 (see README / §6)
 npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm add — resolves SDK-compatible versions
 npx expo start              # dev server (= npm start)
 npx expo lint               # lint (= npm run lint)
@@ -211,8 +212,8 @@ These are untouched `create-expo-app` leftovers, **unreferenced by any route**:
 - `src/components/{themed-text,themed-view,hint-row,web-badge,external-link,animated-icon*}.tsx`, `src/components/ui/collapsible.tsx`
 - `src/constants/theme.ts`, `src/global.css`, `src/hooks/use-theme.ts`, `src/hooks/use-color-scheme*.ts`
 - Many assets: `react-logo*`, `expo-logo`, `expo-badge*`, `tutorial-web`, `logo-glow`, `assets/images/tabIcons/*`
-- Unused dependencies: `@expo/ui`, `expo-constants`, `expo-device`, `expo-font`, `expo-glass-effect`, `expo-linking`, `expo-system-ui`, `react-native-url-polyfill`, `@supabase/supabase-js`
-- `README.md` is boilerplate.
+- Unused dependencies: `@expo/ui`, `expo-device`, `expo-font`, `expo-glass-effect`, `expo-linking`, `expo-system-ui`, `react-native-url-polyfill`, `@supabase/supabase-js`
+- `README.md` is the human-facing setup guide (install, `build:model`, env vars). Keep it in sync with §2 and §6.
 
 **`src/constants/theme.ts` is NOT the app's theme — `src/constants/palette.ts` is.**
 
