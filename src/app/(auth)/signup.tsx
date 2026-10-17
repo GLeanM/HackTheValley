@@ -16,32 +16,51 @@ import { PrimaryButton } from "@/components/relast/primary-button";
 import { Palette } from "@/constants/palette";
 import { useApp } from "@/state/app-context";
 
-function getNameError(val: string): string | null {
+function getNameErrors(val: string): string[] {
+  const errors: string[] = [];
   const trimmed = val.trim();
-  if (!trimmed) return "Username is required.";
-  if (trimmed.length >= 80) return "Username must be less than 80 characters.";
-  return null;
+  if (!trimmed) {
+    errors.push("Username is required.");
+  } else if (trimmed.length >= 80) {
+    errors.push("Username must be less than 80 characters.");
+  }
+  return errors;
 }
 
-function getEmailError(val: string): string | null {
+function getEmailErrors(val: string): string[] {
+  const errors: string[] = [];
   const trimmed = val.trim();
-  if (!trimmed) return "Email is required.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed))
-    return "Please enter a valid email address.";
-  return null;
+  if (!trimmed) {
+    errors.push("Email is required.");
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    errors.push("Please enter a valid email address.");
+  }
+  return errors;
 }
 
-function getPasswordError(val: string): string | null {
-  if (!val) return "Password is required.";
-  if (val.length < 8) return "Password must be at least 8 characters.";
-  if (!/[A-Z]/.test(val))
-    return "Password must contain at least 1 uppercase letter.";
-  if (!/[a-z]/.test(val))
-    return "Password must contain at least 1 lowercase letter.";
-  if (!/[0-9]/.test(val)) return "Password must contain at least 1 number.";
-  if (!/[^A-Za-z0-9]/.test(val))
-    return "Password must contain at least 1 special character.";
-  return null;
+// Checks ALL password rules simultaneously with updated error messages
+function getPasswordErrors(val: string): string[] {
+  const errors: string[] = [];
+  if (!val) {
+    errors.push("Password is required.");
+    return errors;
+  }
+  if (val.length < 8) {
+    errors.push("• Password must be at least 8 characters long.");
+  }
+  if (!/[A-Z]/.test(val)) {
+    errors.push("• Password must contain at least 1 uppercase letter.");
+  }
+  if (!/[a-z]/.test(val)) {
+    errors.push("• Password must contain at least 1 lowercase letter.");
+  }
+  if (!/[0-9]/.test(val)) {
+    errors.push("• Password must contain at least 1 number.");
+  }
+  if (!/[^A-Za-z0-9]/.test(val)) {
+    errors.push("• Password must contain at least 1 special character.");
+  }
+  return errors;
 }
 
 export default function SignUpScreen() {
@@ -61,19 +80,29 @@ export default function SignUpScreen() {
     isError: boolean;
   } | null>(null);
 
-  const nameError = getNameError(name);
-  const emailError = getEmailError(email);
-  const passwordError = getPasswordError(password);
+  // Compute all violation messages dynamically
+  const nameErrors = getNameErrors(name);
+  const emailErrors = getEmailErrors(email);
+  const passwordErrors = getPasswordErrors(password);
 
-  const showNameError = (touched.name || submitted) && nameError;
-  const showEmailError = (touched.email || submitted) && emailError;
-  const showPasswordError = (touched.password || submitted) && passwordError;
+  // Real-time visibility triggers
+  const showNameErrors =
+    (name.length > 0 || touched.name || submitted) && nameErrors.length > 0;
+  const showEmailErrors =
+    (email.length > 0 || touched.email || submitted) && emailErrors.length > 0;
+  const showPasswordErrors =
+    (password.length > 0 || touched.password || submitted) &&
+    passwordErrors.length > 0;
 
   const submit = async () => {
     setSubmitted(true);
     setTouched({ name: true, email: true, password: true });
 
-    if (nameError || emailError || passwordError) {
+    if (
+      nameErrors.length > 0 ||
+      emailErrors.length > 0 ||
+      passwordErrors.length > 0
+    ) {
       return;
     }
 
@@ -129,9 +158,13 @@ export default function SignUpScreen() {
           )}
 
           <View style={styles.form}>
+            {/* Username / Name Field */}
             <View style={styles.fieldContainer}>
               <TextInput
-                style={[styles.input, showNameError ? styles.inputError : null]}
+                style={[
+                  styles.input,
+                  showNameErrors ? styles.inputError : null,
+                ]}
                 placeholder="Name"
                 placeholderTextColor={Palette.muted}
                 value={name}
@@ -141,14 +174,20 @@ export default function SignUpScreen() {
                   if (toast) setToast(null);
                 }}
               />
-              {showNameError && <Text style={styles.error}>{nameError}</Text>}
+              {showNameErrors &&
+                nameErrors.map((err, idx) => (
+                  <Text key={idx} style={styles.error}>
+                    {err}
+                  </Text>
+                ))}
             </View>
 
+            {/* Email Field */}
             <View style={styles.fieldContainer}>
               <TextInput
                 style={[
                   styles.input,
-                  showEmailError ? styles.inputError : null,
+                  showEmailErrors ? styles.inputError : null,
                 ]}
                 placeholder="Email"
                 placeholderTextColor={Palette.muted}
@@ -161,14 +200,20 @@ export default function SignUpScreen() {
                   if (toast) setToast(null);
                 }}
               />
-              {showEmailError && <Text style={styles.error}>{emailError}</Text>}
+              {showEmailErrors &&
+                emailErrors.map((err, idx) => (
+                  <Text key={idx} style={styles.error}>
+                    {err}
+                  </Text>
+                ))}
             </View>
 
+            {/* Password Field */}
             <View style={styles.fieldContainer}>
               <TextInput
                 style={[
                   styles.input,
-                  showPasswordError ? styles.inputError : null,
+                  showPasswordErrors ? styles.inputError : null,
                 ]}
                 placeholder="Password"
                 placeholderTextColor={Palette.muted}
@@ -180,9 +225,12 @@ export default function SignUpScreen() {
                   if (toast) setToast(null);
                 }}
               />
-              {showPasswordError && (
-                <Text style={styles.error}>{passwordError}</Text>
-              )}
+              {showPasswordErrors &&
+                passwordErrors.map((err, idx) => (
+                  <Text key={idx} style={styles.error}>
+                    {err}
+                  </Text>
+                ))}
             </View>
 
             <PrimaryButton label="Sign up" onPress={submit} />
