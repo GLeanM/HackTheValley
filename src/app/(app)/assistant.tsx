@@ -3,13 +3,13 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Animated, Easing, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryWheel } from '@/components/relast/category-wheel';
 import { CircleButton } from '@/components/relast/circle-button';
 import { PrimaryButton } from '@/components/relast/primary-button';
-import { WebCamera } from '@/components/relast/web-camera';
+import { WebCamera, type WebCameraHandle } from '@/components/relast/web-camera';
 import { Palette } from '@/constants/palette';
 import { aiProvider, CATEGORIES, CATEGORY_META, type Category } from '@/services/ai';
 import { useApp } from '@/state/app-context';
@@ -36,11 +36,98 @@ export default function AssistantScreen() {
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const cameraBusy = useRef(false);
-  const [webCam, setWebCam] = useState(false);
+  const webCameraRef = useRef<WebCameraHandle | null>(null);
+  const inputBarRef = useRef<View | null>(null);
+  const focusedInputRef = useRef<TextInput | null>(null);
+  const focusedInputCardRef = useRef<View | null>(null);
+  const inputBarStartY = useRef<number | null>(null);
+  const focusStartOffset = useRef(-72);
+  const focusAnimation = useRef(new Animated.Value(0)).current;
+  const inputBarTranslateY = useRef(new Animated.Value(0)).current;
+  const [cameraDenied, setCameraDenied] = useState(false);
+
+  useEffect(() => {
+    if (!textMode) return;
+
+    focusAnimation.setValue(0);
+    const frame = requestAnimationFrame(() => {
+      const sourceY = inputBarStartY.current;
+      const inputCard = focusedInputCardRef.current;
+
+      const animateFrom = (translateY: number) => {
+        focusStartOffset.current = translateY;
+        inputBarTranslateY.setValue(translateY);
+        Animated.parallel([
+          Animated.timing(focusAnimation, {
+            toValue: 1,
+            duration: 340,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(inputBarTranslateY, {
+            toValue: 0,
+            duration: 380,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      };
+
+      if (sourceY === null || !inputCard) {
+        animateFrom(-72);
+        return;
+      }
+      inputCard.measureInWindow((_x, targetY) => {
+        animateFrom(sourceY - targetY);
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      focusAnimation.stopAnimation();
+      inputBarTranslateY.stopAnimation();
+    };
+  }, [focusAnimation, inputBarTranslateY, textMode]);
 
   const canSubmit = (!!imageUri || text.trim().length >= 3) && !loading;
 
   const goHome = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  const leaveTextMode = () => {
+    focusAnimation.stopAnimation();
+    inputBarTranslateY.stopAnimation();
+    Animated.parallel([
+      Animated.timing(focusAnimation, {
+        toValue: 0,
+        duration: 320,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(inputBarTranslateY, {
+        toValue: focusStartOffset.current,
+        duration: 380,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (!finished) return;
+      Keyboard.dismiss();
+      setTextMode(false);
+    });
+  };
+
+  const enterTextMode = () => {
+    const inputBar = inputBarRef.current;
+    if (!inputBar) {
+      inputBarStartY.current = null;
+      setTextMode(true);
+      return;
+    }
+    inputBar.measureInWindow((_x, y) => {
+      inputBarStartY.current = y;
+      setTextMode(true);
+    });
+  };
 
   const pickFromLibrary = async () => {
     try {
@@ -76,7 +163,7 @@ export default function AssistantScreen() {
   const takePhoto = async () => {
     // Browser (e.g. MacBook webcam): the system camera sheet doesn't exist, so use getUserMedia.
     if (Platform.OS === 'web') {
-      setWebCam(true);
+      webCameraRef.current?.capture();
       return;
     }
     if (cameraBusy.current) return;
@@ -84,9 +171,10 @@ export default function AssistantScreen() {
     try {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
-        offerLibrary('Camera access is off. Choose a photo from your device instead?');
+        setCameraDenied(true);
         return;
       }
+      setCameraDenied(false);
       const res = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         quality: 0.5,
@@ -136,71 +224,42 @@ export default function AssistantScreen() {
     </View>
   );
 
-  if (textMode) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.textHeader}>
-            <Pressable onPress={() => setTextMode(false)} accessibilityRole="button" accessibilityLabel="Back to assistant" style={styles.textBack}>
-              <Ionicons name="chevron-down" size={22} color={Palette.forest} />
-              <Text style={styles.textBackLabel}>Back to camera view</Text>
-            </Pressable>
-            <Text style={styles.catTag}>{auto ? 'Auto-detect' : CATEGORY_META[category].label}</Text>
-          </View>
-          <TextInput
-            autoFocus
-            multiline
-            style={styles.bigInput}
-            placeholder={PLACEHOLDER}
-            placeholderTextColor={Palette.muted}
-            value={text}
-            onChangeText={setText}
-            textAlignVertical="top"
-            editable={!loading}
-          />
-          <View style={styles.bottom}>
-            {errorBox}
-            {askButton}
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' && !textMode ? 'padding' : undefined}>
         <View style={styles.header}>
-          <Pressable onPress={goHome} accessibilityRole="button" accessibilityLabel="Back" style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={Palette.forestDark} />
-          </Pressable>
-          <Text style={styles.title}>{auto ? 'Ask Relast' : TITLES[category]}</Text>
+          <View style={{ width: 40 }} />
+          <Text style={styles.title}>{TITLES[category]}</Text>
           <View style={{ width: 40 }} />
         </View>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.inputCard}>
+          <Animated.View
+            ref={inputBarRef}
+            pointerEvents={textMode ? 'none' : 'auto'}
+            style={[styles.inputCard, { opacity: focusAnimation.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}>
             <TextInput
               multiline
               style={styles.input}
+              underlineColorAndroid="transparent"
               placeholder={PLACEHOLDER}
               placeholderTextColor={Palette.muted}
               value={text}
               onChangeText={setText}
+              onFocus={enterTextMode}
               editable={!loading}
               textAlignVertical="top"
             />
-            <Pressable onPress={() => setTextMode(true)} accessibilityRole="button" accessibilityLabel="Expand to text-only mode" hitSlop={10}>
-              <Ionicons name="expand-outline" size={22} color={Palette.forest} />
-            </Pressable>
-          </View>
+          </Animated.View>
 
           <View style={styles.frame} accessibilityLabel={imageUri ? 'Selected photo' : 'Camera frame'}>
             {imageUri ? (
               <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : Platform.OS === 'web' ? (
+              <WebCamera ref={webCameraRef} onCapture={setImageUri} />
             ) : (
               <Pressable onPress={takePhoto} accessibilityRole="button" accessibilityLabel="Take a photo" style={styles.framePlaceholder}>
                 <Ionicons name="scan-outline" size={44} color={Palette.leaf} />
-                <Text style={styles.frameHint}>Center an item in the frame</Text>
+                <Text style={styles.frameHint}>{cameraDenied ? 'Please enable camera access in settings' : 'Center an item in the frame'}</Text>
               </Pressable>
             )}
             <View pointerEvents="none" style={[styles.corner, styles.tl]} />
@@ -211,20 +270,14 @@ export default function AssistantScreen() {
           {imageUri && (
             <View style={styles.previewActions}>
               <Pill icon="camera-outline" label="Retake" onPress={takePhoto} />
-              <Pill icon="images-outline" label="Gallery" onPress={pickFromLibrary} />
               <Pill icon="trash-outline" label="Remove" onPress={() => setImageUri(null)} />
-            </View>
-          )}
-          {!imageUri && (
-            <View style={styles.previewActions}>
-              <Pill icon="images-outline" label="Gallery" onPress={pickFromLibrary} />
             </View>
           )}
 
           <View style={styles.wheelRow}>
             <CircleButton icon="close" label="Close" onPress={goHome} />
-            <CategoryWheel value={category} onChange={onWheelChange} dimmed={auto} />
-            <CircleButton icon="camera-outline" label="Photo" onPress={takePhoto} filled />
+            <CategoryWheel value={category} onChange={onWheelChange} onSelectedPress={takePhoto} dimmed={auto} />
+            <CircleButton icon="images-outline" label="Gallery" onPress={pickFromLibrary} filled />
           </View>
 
           <Text style={styles.blurb}>{auto ? 'Relast will figure out the category' : CATEGORY_META[category].blurb}</Text>
@@ -243,19 +296,47 @@ export default function AssistantScreen() {
           {askButton}
         </View>
       </KeyboardAvoidingView>
-      {Platform.OS === 'web' && (
-        <WebCamera
-          visible={webCam}
-          onClose={() => setWebCam(false)}
-          onCapture={(uri) => {
-            setImageUri(uri);
-            setWebCam(false);
-          }}
-          onUnavailable={(message) => {
-            setWebCam(false);
-            offerLibrary(message);
-          }}
-        />
+      {textMode && (
+        <View style={styles.focusOverlay}>
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, styles.focusScrim, { opacity: focusAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 0.88] }) }]}
+          />
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={leaveTextMode}
+            accessibilityRole="button"
+            accessibilityLabel="Return to assistant"
+          />
+          <KeyboardAvoidingView style={styles.focusAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : undefined} pointerEvents="box-none">
+            <View style={styles.focusContent} pointerEvents="box-none">
+              <Animated.View
+                style={[
+                  styles.focusInputCard,
+                  {
+                    opacity: focusAnimation,
+                    transform: [{ translateY: inputBarTranslateY }],
+                  },
+                ]}
+                pointerEvents="box-none"
+                ref={focusedInputCardRef}>
+                <TextInput
+                  ref={focusedInputRef}
+                  autoFocus
+                  multiline
+                  style={styles.focusInput}
+                  underlineColorAndroid="transparent"
+                  placeholder={PLACEHOLDER}
+                  placeholderTextColor={Palette.muted}
+                  value={text}
+                  onChangeText={setText}
+                  textAlignVertical="center"
+                  editable={!loading}
+                />
+              </Animated.View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -273,8 +354,8 @@ function Pill({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.cream },
   scroll: { padding: 20, gap: 14, flexGrow: 1 },
-  inputCard: { flexDirection: 'row', gap: 10, backgroundColor: Palette.card, borderRadius: 20, borderWidth: 1, borderColor: Palette.border, padding: 14, alignItems: 'flex-start' },
-  input: { flex: 1, minHeight: 56, maxHeight: 110, fontSize: 16, color: Palette.ink },
+  inputCard: { flexDirection: 'row', gap: 10, backgroundColor: Palette.card, borderRadius: 20, borderWidth: 1, borderColor: Palette.border, paddingHorizontal: 14, paddingVertical: 7, alignItems: 'center', minHeight: 54 },
+  input: { flex: 1, minHeight: 38, maxHeight: 86, fontSize: 16, color: Palette.ink, outlineColor: 'transparent', outlineWidth: 0 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 4 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '700', color: Palette.forestDark },
@@ -297,9 +378,10 @@ const styles = StyleSheet.create({
   bottom: { paddingHorizontal: 20, paddingBottom: 12, paddingTop: 8, gap: 10 },
   errorBox: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: Palette.dangerBg, borderRadius: 14, padding: 12 },
   errorText: { color: Palette.danger, flex: 1, fontSize: 14 },
-  textHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 },
-  textBack: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 6 },
-  textBackLabel: { color: Palette.forest, fontWeight: '600', fontSize: 15 },
-  catTag: { color: Palette.muted, fontSize: 13, fontWeight: '600' },
-  bigInput: { flex: 1, margin: 20, marginTop: 8, fontSize: 20, lineHeight: 28, color: Palette.ink },
+  focusOverlay: { ...StyleSheet.absoluteFill, zIndex: 10 },
+  focusScrim: { backgroundColor: Palette.ink },
+  focusAvoiding: { flex: 1, paddingHorizontal: 20 },
+  focusContent: { flex: 1, justifyContent: 'center', paddingBottom: 12 },
+  focusInputCard: { minHeight: 56, maxHeight: 120, flexDirection: 'row', alignItems: 'center', backgroundColor: Palette.card, borderRadius: 20, borderWidth: 1, borderColor: Palette.border, paddingHorizontal: 14, paddingVertical: 8 },
+  focusInput: { flex: 1, minHeight: 38, maxHeight: 104, fontSize: 16, color: Palette.ink, outlineColor: 'transparent', outlineWidth: 0 },
 });

@@ -3,11 +3,11 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  type SharedValue,
+    useAnimatedReaction,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -23,6 +23,7 @@ export const WHEEL_HEIGHT = ITEM + 8;
 interface Props {
   value: Category;
   onChange: (c: Category) => void;
+  onSelectedPress: () => void;
   /** Dim the wheel when the AI is auto-detecting the category. */
   dimmed?: boolean;
 }
@@ -59,7 +60,7 @@ function WheelItem({ index, pos, selected, onPress }: { index: number; pos: Shar
 }
 
 /** Rotating circular carousel: swipe left/right or tap a neighbour. Loops endlessly. */
-export function CategoryWheel({ value, onChange, dimmed }: Props) {
+export function CategoryWheel({ value, onChange, onSelectedPress, dimmed }: Props) {
   const pos = useSharedValue(CATEGORIES.indexOf(value));
   const start = useSharedValue(0);
 
@@ -105,7 +106,13 @@ export function CategoryWheel({ value, onChange, dimmed }: Props) {
       <View style={[styles.wrap, dimmed && { opacity: 0.8 }]} accessibilityLabel="Category selector. Swipe to change.">
         <View style={styles.ring} pointerEvents="none" />
         {CATEGORIES.map((c, i) => (
-          <WheelItem key={c} index={i} pos={pos} selected={c === value} onPress={() => goTo(i)} />
+          <WheelItem
+            key={c}
+            index={i}
+            pos={pos}
+            selected={c === value}
+            onPress={() => (c === value ? onSelectedPress() : goTo(i))}
+          />
         ))}
       </View>
     </GestureDetector>
