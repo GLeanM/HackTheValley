@@ -30,6 +30,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Relast uses your camera to identify items, waste and food.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Relast uses your photos so you can ask about items you own.",
