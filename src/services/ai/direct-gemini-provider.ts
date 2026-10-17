@@ -13,6 +13,20 @@ Identify the item and say how to dispose of it, whether it can be reused, and ho
 - answer: 1-3 plain sentences. why: one sentence on the environmental benefit.
 - recommendations / alternatives: short actionable strings.
 - lifecycle (only for category "lifecycle"): estimate, repairs, donation. recipes (only for "food"): title, time, ingredients, steps.
+
+When category is "lifecycle" (a durable item: clothes, shoes, electronics, furniture, appliances, tools):
+- itemName: the specific object, with brand/type if visible (e.g. "Nike running shoes").
+- answer: its typical lifespan, then roughly how much life is left given the condition you can see or the user describes.
+- lifecycle.estimate: short typical range (e.g. "5–8 years"). lifecycle.repairs: concrete fixes for visible or likely wear. lifecycle.donation: where it can be donated, resold or taken back (types of places, not invented store names).
+- recommendations: care tips that extend its life. alternatives: ways to repurpose it, then how to dispose of it responsibly at end of life.
+- Always include the lifecycle object and reuse.
+
+When category is "food" (leftovers, ingredients, produce):
+- itemName: the food(s) shown or described.
+- answer: whether it is likely still good to eat and roughly how long it keeps; if spoilage is possible, say what signs to check and to throw it out if unsure.
+- recipes: 2-3 quick recipes that use it up. recommendations: how to store, freeze or preserve it.
+- alternatives: other options besides the trash (e.g. stock/broth from scraps, regrowing, sharing or a community fridge, composting what's left).
+- Only set bin if the food is spoiled or inedible scraps. Always include recipes.
 - confidence.level is low|medium|high; be honest if the photo is unclear.
 - A "Hint" comes from an image classifier: use it to name the item and pick the bin unless the photo clearly shows otherwise.
 Never invent certainty. Keep every string short.`;
@@ -41,6 +55,7 @@ const RESPONSE_SCHEMA = {
     lifecycle: {
       type: 'object',
       properties: { estimate: { type: 'string' }, repairs: strArray, donation: strArray },
+      required: ['estimate', 'repairs', 'donation'],
     },
     recipes: {
       type: 'array',
