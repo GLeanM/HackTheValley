@@ -2,12 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
+
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Easing, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryWheel } from '@/components/relast/category-wheel';
 import { CircleButton } from '@/components/relast/circle-button';
+import { LiveCamera } from '@/components/relast/live-camera';
 import { PrimaryButton } from '@/components/relast/primary-button';
 import { WebCamera, type WebCameraHandle } from '@/components/relast/web-camera';
 import { Palette } from '@/constants/palette';
@@ -111,16 +113,6 @@ export default function AssistantScreen() {
       Alert.alert('Photo unavailable', 'We could not open your photo library.');
     }
   };
-
-  // Android may kill this activity while the system camera is open; the photo is then delivered on relaunch.
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    ImagePicker.getPendingResultAsync()
-      .then((pending) => {
-        if (pending && 'canceled' in pending && !pending.canceled && pending.assets?.[0]) setImageUri(pending.assets[0].uri);
-      })
-      .catch(() => {});
-  }, []);
 
   const offerLibrary = (message: string) => {
     // RN-web's Alert.alert is a no-op.

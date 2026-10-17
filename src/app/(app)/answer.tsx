@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mascot } from '@/components/relast/mascot';
 import { PrimaryButton } from '@/components/relast/primary-button';
 import { Palette } from '@/constants/palette';
-import { CATEGORY_META, type BinType } from '@/services/ai';
+import { CATEGORY_META, ON_DEVICE_MODEL, type BinType } from '@/services/ai';
 import { useApp } from '@/state/app-context';
 
 const BIN_BADGE: Record<BinType, { label: string; icon: keyof typeof Ionicons.glyphMap; bg: string }> = {
@@ -74,6 +74,11 @@ export default function AnswerScreen() {
         {!!r.question && <Text style={styles.question}>“{r.question}”</Text>}
 
         {r.source === 'mock' && <Text style={styles.sample}>Sample answer — the live AI isn’t connected yet.</Text>}
+        {r.classifier && (
+          <Text style={styles.muted}>
+            Bin picked by our {r.classifier.model === ON_DEVICE_MODEL ? 'on-device ' : ''}trash classifier: {r.classifier.label} ({Math.round(r.classifier.score * 100)}% confident)
+          </Text>
+        )}
 
         <Card>
           <Text style={styles.body}>{r.answer}</Text>

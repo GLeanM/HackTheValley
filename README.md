@@ -1,56 +1,51 @@
-# Welcome to your Expo app 👋
+# Relast
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An AI-powered sustainability assistant (Expo / React Native / TypeScript). It shows you how long products last, which bin your trash goes in, and what to cook with leftovers. It runs on iOS, Android (Expo Go) and web.
 
-## Get started
+## Setup
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+**Requirements:** Node.js and **Python 3**. Python is only used to build the on-device trash classifier. On **Windows**, run the commands from Git Bash or WSL, because `build:model` is a bash script.
 
 ```bash
-npm run reset-project
+npm install            # JS dependencies
+npm run build:model    # one-time: builds the on-device trash classifier (see below)
+npx expo start         # dev server; press w for web, or scan the QR code with Expo Go
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+### The trash classifier model (`npm run build:model`)
 
-### Other setup steps
+The Sorter feature uses an image model ([`dima806/garbage_types_image_detection`](https://huggingface.co/dima806/garbage_types_image_detection)) that runs **on the device**: in the browser on web, and in a hidden WebView in the mobile app. The model files are too big for git, so each clone builds them once. The script:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+- creates a Python virtualenv in `server/.venv`;
+- downloads the model and converts it to ONNX (`public/models/`, about 90 MB);
+- copies the browser ML runtime into `public/vendor/` (about 75 MB).
 
-## Learn more
+The first run takes a few minutes and downloads around 1 GB, mostly PyTorch. Both output folders are gitignored.
 
-To learn more about developing your project with Expo, look at the following resources:
+**Run it again** when the model changes or after upgrading `@huggingface/transformers`.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+**If you skip it,** the app still works. The Sorter just falls back to the classifier server (if configured) or the normal AI answer, and won't show the "on-device trash classifier" line.
 
-## Join the community
+### Running it
 
-Join our community of developers creating universal apps.
+- **Web:** nothing extra. The browser downloads the model from your dev server the first time and caches it.
+- **Phone (Expo Go):** the phone loads the model from the laptop running `expo start`, so it must be on the same network (same Wi-Fi or Tailscale). After logging in, give it about 10–20 seconds the first time while the model downloads.
+- **Standalone production builds** don't include the model. They have no dev server to load it from, so they fall back.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Optional environment variables (`.env` in the repo root)
+
+| Variable | Purpose |
+| --- | --- |
+| `EXPO_PUBLIC_GEMINI_API_KEY` | Live AI answers through Gemini (demo only, because the key ships inside the app). Without it, answers are sample data. |
+| `EXPO_PUBLIC_RELAST_API_URL` | Backend that answers questions, so the Gemini key stays on a server. |
+| `EXPO_PUBLIC_RELAST_CLASSIFIER_URL` | Backup classifier server for when the on-device model isn't available. See [`server/README.md`](server/README.md). |
+
+Restart `npx expo start` after changing `.env`.
+
+## Checks
+
+```bash
+npx tsc --noEmit       # typecheck
+```
+
+Project conventions and architecture notes for contributors and AI agents are in [`AGENTS.md`](AGENTS.md).
