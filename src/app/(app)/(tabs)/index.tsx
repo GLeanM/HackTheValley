@@ -42,7 +42,7 @@ export default function HomeScreen() {
         <Text style={styles.hello}>
           {greeting()}, {user?.name ?? 'there'}
         </Text>
-        <Text style={styles.sub}>Make it last. Waste less.</Text>
+        <Text style={styles.sub}>Make it last. Do it fast.</Text>
 
         {FEATURES.map((f) => (
           <Pressable

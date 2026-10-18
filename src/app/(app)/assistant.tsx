@@ -234,14 +234,6 @@ export default function AssistantScreen() {
           <Text style={styles.blurb}>{auto ? 'Relast will figure out the category' : CATEGORY_META[category].blurb}</Text>
           <View style={styles.autoRow}>
             <CircleButton icon="close" label="Close" onPress={goHome} size={48} alignIconToCenter />
-            <Pressable
-              onPress={() => setAuto((a) => !a)}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: auto }}
-              style={[styles.autoChip, auto && styles.autoChipOn]}>
-              <Ionicons name="sparkles-outline" size={16} color={auto ? Palette.white : Palette.forest} />
-              <Text style={[styles.autoText, auto && { color: Palette.white }]}>Auto-detect</Text>
-            </Pressable>
             <CircleButton icon="images-outline" label="Gallery" onPress={pickFromLibrary} size={48} filled alignIconToCenter />
           </View>
         </ScrollView>
