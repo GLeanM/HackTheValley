@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Palette } from '@/constants/palette';
+import { Palette, Shadow } from '@/constants/palette';
 
 interface Props {
   label: string;
@@ -36,9 +36,9 @@ export function PrimaryButton({ label, onPress, disabled, loading, variant = 'so
 }
 
 const styles = StyleSheet.create({
-  base: { height: 54, borderRadius: 999, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  solid: { backgroundColor: Palette.forest },
-  soft: { backgroundColor: Palette.mint },
-  disabled: { backgroundColor: '#B9C7B5' },
-  label: { color: Palette.white, fontSize: 17, fontWeight: '700' },
+  base: { height: 56, borderRadius: 999, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  solid: { backgroundColor: Palette.forest, ...Shadow.card, shadowColor: Palette.forest, shadowOpacity: 0.28 },
+  soft: { backgroundColor: Palette.mint, borderWidth: 1.5, borderColor: Palette.mintDeep },
+  disabled: { backgroundColor: Palette.disabled, shadowOpacity: 0 },
+  label: { color: Palette.white, fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
 });

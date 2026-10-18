@@ -7,16 +7,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Mascot } from '@/components/relast/mascot';
 import { PrimaryButton } from '@/components/relast/primary-button';
-import { Palette } from '@/constants/palette';
+import { Palette, Radius, Shadow } from '@/constants/palette';
 import { CATEGORY_META, ON_DEVICE_MODEL, type BinType } from '@/services/ai';
 import { useApp } from '@/state/app-context';
 
 const BIN_BADGE: Record<BinType, { label: string; icon: keyof typeof Ionicons.glyphMap; bg: string }> = {
-  recycling: { label: 'Recycle', icon: 'refresh-circle-outline', bg: Palette.mintDeep },
-  garbage: { label: 'Landfill', icon: 'trash-outline', bg: Palette.sand },
+  recycling: { label: 'Recycle', icon: 'refresh-circle-outline', bg: Palette.moss },
+  garbage: { label: 'Landfill', icon: 'trash-outline', bg: Palette.steel },
   compost: { label: 'Compost', icon: 'leaf-outline', bg: Palette.mint },
   hazardous: { label: 'Hazardous', icon: 'warning-outline', bg: Palette.dangerBg },
-  ewaste: { label: 'E-waste', icon: 'hardware-chip-outline', bg: Palette.sand },
+  ewaste: { label: 'E-waste', icon: 'hardware-chip-outline', bg: Palette.olive },
   unsure: { label: 'Check local rules', icon: 'help-circle-outline', bg: Palette.sand },
 };
 
@@ -194,10 +194,10 @@ function Section({ title, items, icon = 'leaf-outline' }: { title: string; items
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.cream },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 6 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Palette.mint, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Palette.card, ...Shadow.card, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: Palette.forestDark },
   scroll: { padding: 20, gap: 14 },
-  image: { width: '100%', height: 200, borderRadius: 24 },
+  image: { width: '100%', height: 220, borderRadius: Radius.card },
   imageFallback: { backgroundColor: Palette.mint, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   binBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
@@ -205,13 +205,13 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', gap: 8 },
   chip: { fontSize: 13, fontWeight: '600', color: Palette.forestDark, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5, overflow: 'hidden' },
   mascotRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bubble: { backgroundColor: Palette.mint, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
+  bubble: { backgroundColor: Palette.tea, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleText: { fontWeight: '600', color: Palette.forestDark, fontSize: 14 },
-  h1: { fontSize: 28, fontWeight: '800', color: Palette.forestDark },
+  h1: { fontSize: 30, fontWeight: '800', color: Palette.forestDark, letterSpacing: -0.6 },
   h2: { fontSize: 18, fontWeight: '700', color: Palette.forestDark, marginBottom: 4 },
   question: { fontSize: 15, color: Palette.muted, fontStyle: 'italic' },
-  sample: { fontSize: 13, color: Palette.clay, fontWeight: '600' },
-  card: { backgroundColor: Palette.card, borderRadius: 22, borderWidth: 1, borderColor: Palette.border, padding: 16, gap: 6 },
+  sample: { fontSize: 13, color: Palette.grey, fontWeight: '600' },
+  card: { backgroundColor: Palette.card, borderRadius: Radius.card, borderWidth: 1, borderColor: Palette.border, padding: 18, gap: 6, ...Shadow.card },
   body: { fontSize: 16, lineHeight: 23, color: Palette.ink },
   label: { fontSize: 12, fontWeight: '700', color: Palette.muted, textTransform: 'uppercase', letterSpacing: 0.6 },
   big: { fontSize: 20, fontWeight: '800', color: Palette.forestDark },

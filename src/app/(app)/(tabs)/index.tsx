@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FactCarousel } from '@/components/relast/fact-carousel';
 import { Mascot } from '@/components/relast/mascot';
-import { Palette, Radius } from '@/constants/palette';
+import { Palette, Radius, Shadow } from '@/constants/palette';
 import { useApp } from '@/state/app-context';
 
 const FOOTPRINT_URL = 'https://www.footprintcalculator.org/home/en';
@@ -54,7 +54,9 @@ export default function HomeScreen() {
         </Pressable>
 
         <View style={styles.impact}>
-          <Ionicons name="leaf" size={26} color={Palette.leaf} />
+          <View style={styles.impactIcon}>
+            <Ionicons name="leaf" size={24} color={Palette.forestDark} />
+          </View>
           <View>
             <Text style={styles.impactLabel}>Your impact this week</Text>
             <Text style={styles.impactValue}>
@@ -77,15 +79,16 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.cream },
   scroll: { padding: 20, gap: 14 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { fontSize: 34, fontWeight: '900', color: Palette.forestDark, letterSpacing: -0.5 },
-  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: Palette.mintDeep, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontWeight: '800', color: Palette.forestDark, fontSize: 16 },
-  hello: { fontSize: 28, fontWeight: '800', color: Palette.forestDark, marginTop: 6 },
+  brand: { fontSize: 60, fontWeight: '900', color: Palette.forestDark, letterSpacing: -0.5 },
+  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: Palette.forest, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontWeight: '800', color: Palette.tea, fontSize: 16 },
+  hello: { fontSize: 30, fontWeight: '800', color: Palette.forestDark, marginTop: 6, letterSpacing: -0.6 },
   sub: { fontSize: 16, color: Palette.muted, marginBottom: 4 },
-  impact: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: Palette.mint, borderRadius: 24, padding: 16 },
-  impactLabel: { fontSize: 13, color: Palette.muted },
-  impactValue: { fontSize: 18, fontWeight: '700', color: Palette.ink },
-  games: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Palette.sand, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 8 },
+  impact: { flexDirection: 'row', gap: 14, alignItems: 'center', backgroundColor: Palette.forest, borderRadius: Radius.card, padding: 18, ...Shadow.card },
+  impactIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: Palette.moss, alignItems: 'center', justifyContent: 'center' },
+  impactLabel: { fontSize: 13, color: Palette.olive, fontWeight: '600' },
+  impactValue: { fontSize: 18, fontWeight: '800', color: Palette.beige },
+  games: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Palette.sand, borderRadius: Radius.card, paddingHorizontal: 18, paddingVertical: 10 },
   gamesText: { flex: 1, fontSize: 14, fontWeight: '600', color: Palette.muted },
   footprint: {
     flexDirection: 'row',
@@ -96,7 +99,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Palette.mintDeep,
     backgroundColor: Palette.card,
-    height: 50,
+    height: 52,
+    ...Shadow.card,
   },
   footprintText: { color: Palette.forest, fontWeight: '700', fontSize: 15 },
 });
