@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     minHeight: 38,
     maxHeight: 86,
     fontSize: 16,
-    color: Palette.white,
+    color: Palette.ink,
     outlineWidth: 0,
   },
   header: {
