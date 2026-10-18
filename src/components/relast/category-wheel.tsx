@@ -141,8 +141,8 @@ const styles = StyleSheet.create({
     height: ITEM_SIZE + 8,
     borderRadius: 999,
     zIndex: 0,
-    backgroundColor: Palette.mint,
-    opacity: 0.6,
+    backgroundColor: Palette.tea,
+    opacity: 0.8,
   },
   item: { position: 'absolute', width: ITEM_SIZE, height: ITEM_SIZE },
   disc: {
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   },
   discSelected: {
     backgroundColor: Palette.forest,
-    borderColor: Palette.leaf,
+    borderColor: Palette.moss,
     shadowColor: Palette.forestDark,
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -166,5 +166,5 @@ const styles = StyleSheet.create({
   },
   discPressed: { transform: [{ scale: 0.96 }] },
   itemLabel: { fontSize: 15, fontWeight: '700', color: Palette.forest },
-  itemLabelSelected: { color: Palette.white },
+  itemLabelSelected: { color: Palette.tea },
 });

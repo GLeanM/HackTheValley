@@ -26,7 +26,7 @@ import {
   WebCamera,
   type WebCameraHandle,
 } from "@/components/relast/web-camera";
-import { Palette } from "@/constants/palette";
+import { Palette, Shadow } from "@/constants/palette";
 import {
   aiProvider,
   CATEGORIES,
@@ -35,7 +35,7 @@ import {
 } from "@/services/ai";
 import { useApp } from "@/state/app-context";
 
-const PLACEHOLDER = "Add some text!";
+const PLACEHOLDER = "Type here";
 
 const TITLES: Record<Category, string> = {
   lifecycle: "Give it a second life",
@@ -400,13 +400,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     backgroundColor: Palette.card,
-    borderRadius: 20,
+    borderRadius: 26,
     borderWidth: 1,
     borderColor: Palette.border,
     paddingHorizontal: 14,
     paddingVertical: 7,
     alignItems: "center",
     minHeight: 54,
+    ...Shadow.card,
   },
   inputLayer: { position: "absolute", zIndex: 11 },
   input: {
@@ -415,8 +416,7 @@ const styles = StyleSheet.create({
     maxHeight: 86,
     fontSize: 16,
     color: Palette.ink,
-    outlineColor: "transparent",
-    outlineWidth: 0,
+    outlineWidth: 1,
   },
   header: {
     flexDirection: "row",

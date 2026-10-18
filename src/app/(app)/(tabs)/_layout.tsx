@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { Palette, Radius } from '@/constants/palette';
+import { Palette, Radius, Shadow } from '@/constants/palette';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 // Active tab gets the filled glyph on a mint pill so the current page is obvious.
@@ -20,11 +20,18 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Palette.forestDark,
-        tabBarInactiveTintColor: Palette.muted,
+        tabBarActiveTintColor: Palette.forest,
+        tabBarInactiveTintColor: Palette.grey,
         tabBarLabelStyle: { fontWeight: '700', fontSize: 11 },
         tabBarIconStyle: { width: 56, height: 32 },
-        tabBarStyle: { backgroundColor: Palette.cream, borderTopColor: Palette.border },
+        tabBarStyle: {
+          backgroundColor: Palette.card,
+          borderTopWidth: 0,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          ...Shadow.card,
+          shadowOffset: { width: 0, height: -6 },
+        },
         sceneStyle: { backgroundColor: Palette.cream },
       }}>
       <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: icon('home', 'home-outline') }} />
@@ -45,5 +52,5 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   pill: { width: 56, height: 32, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  pillActive: { backgroundColor: Palette.mint },
+  pillActive: { backgroundColor: Palette.tea },
 });

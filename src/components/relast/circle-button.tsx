@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Palette } from '@/constants/palette';
+import { Palette, Shadow } from '@/constants/palette';
 
 interface Props {
   icon: keyof typeof Ionicons.glyphMap;
@@ -37,8 +37,9 @@ const styles = StyleSheet.create({
   iconCentered: { transform: [{ translateY: 10 }] },
   btn: {
     backgroundColor: Palette.card,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: Palette.mintDeep,
+    ...Shadow.card,
     alignItems: 'center',
     justifyContent: 'center',
   },

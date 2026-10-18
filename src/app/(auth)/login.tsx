@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Mascot } from "@/components/relast/mascot";
 import { PrimaryButton } from "@/components/relast/primary-button";
-import { Palette } from "@/constants/palette";
+import { Palette, Shadow } from "@/constants/palette";
 import { useApp } from "@/state/app-context";
 
 function validateEmail(val: string): boolean {
@@ -131,13 +131,14 @@ const styles = StyleSheet.create({
   form: { alignSelf: "stretch", gap: 12 },
   input: {
     backgroundColor: Palette.card,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Palette.border,
     paddingHorizontal: 18,
-    height: 54,
+    height: 56,
     fontSize: 16,
     color: Palette.ink,
+    ...Shadow.card,
   },
   inputError: {
     borderColor: Palette.danger,

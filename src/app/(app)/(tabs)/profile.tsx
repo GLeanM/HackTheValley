@@ -7,7 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Mascot } from "@/components/relast/mascot";
 import { PrimaryButton } from "@/components/relast/primary-button";
-import { Palette } from "@/constants/palette";
+import { Palette, Shadow } from "@/constants/palette";
 import { CATEGORY_META, type Category } from "@/services/ai";
 import { useApp } from "@/state/app-context";
 
@@ -15,9 +15,9 @@ type Filter = "all" | Category;
 
 const FILTERS: { key: Filter; label: string; color: string }[] = [
   { key: "all", label: "All", color: Palette.mintDeep },
-  { key: "sorter", label: "Sorter", color: "#6FD43F" },
-  { key: "lifecycle", label: "Lifecycle", color: "#58B9FA" },
-  { key: "food", label: "Food", color: "#B8B8B8" },
+  { key: "sorter", label: "Sorter", color: Palette.moss },
+  { key: "lifecycle", label: "Lifecycle", color: Palette.steel },
+  { key: "food", label: "Food", color: Palette.olive },
 ];
 
 const colorFor = (f: Filter) =>
@@ -60,7 +60,8 @@ export default function ProfileScreen() {
             </Text>
             <View style={styles.filterRow}>
               <Text style={styles.h2}>History</Text>
-              {FILTERS.map((f) => (
+              <View style={styles.filters}>
+                {FILTERS.map((f) => (
                 <Pressable
                   key={f.key}
                   accessibilityRole="button"
@@ -75,6 +76,7 @@ export default function ProfileScreen() {
                   <Text style={styles.chipText}>{f.label.toUpperCase()}</Text>
                 </Pressable>
               ))}
+              </View>
             </View>
           </View>
         }
@@ -133,9 +135,9 @@ export default function ProfileScreen() {
         ListFooterComponent={
           <PrimaryButton
             label="Log out"
-            variant="soft"
+            variant="solid"
             onPress={signOut}
-            style={{ marginTop: 20 }}
+            style={{ marginTop: 20, backgroundColor: Palette.danger }}
           />
         }
       />
@@ -160,7 +162,10 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: Palette.mint,
+    backgroundColor: Palette.tea,
+    borderWidth: 4,
+    borderColor: Palette.white,
+    ...Shadow.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -174,27 +179,22 @@ const styles = StyleSheet.create({
   summary: { flexDirection: "row", gap: 10 },
   stat: {
     flex: 1,
-    backgroundColor: Palette.mint,
-    borderRadius: 18,
-    padding: 12,
+    backgroundColor: Palette.forest,
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: "center",
   },
-  statNum: { fontSize: 24, fontWeight: "800", color: Palette.forestDark },
+  statNum: { fontSize: 26, fontWeight: "800", color: Palette.tea },
   statLabel: {
     fontSize: 12,
-    color: Palette.muted,
+    color: Palette.border,
     fontWeight: "600",
     textAlign: "center",
   },
   sumText: { color: Palette.muted, fontSize: 15, textAlign: "center" },
-  h2: { fontSize: 20, fontWeight: "800", color: Palette.forestDark },
-  filterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 4,
-  },
+  h2: { fontSize: 35, fontWeight: "800", color: Palette.forestDark },
+  filterRow: {flexDirection: 'column', gap: 10},
   chip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
   chipOff: { opacity: 0.45 },
   chipText: { fontSize: 12, fontWeight: "700", color: Palette.ink },
@@ -204,9 +204,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     backgroundColor: Palette.card,
-    borderRadius: 20,
-    borderWidth: 2,
+    borderRadius: 24,
+    borderWidth: 1.5,
     borderColor: Palette.border,
+    ...Shadow.card,
     padding: 12,
   },
   thumb: { width: 56, height: 56, borderRadius: 14 },
@@ -218,4 +219,5 @@ const styles = StyleSheet.create({
   itemTitle: { fontSize: 16, fontWeight: "700", color: Palette.ink },
   itemSub: { fontSize: 14, color: Palette.muted },
   itemMeta: { fontSize: 12, color: Palette.muted, marginTop: 2 },
+  filters: {flexDirection: 'row', flexWrap: 'wrap',gap: 8, marginTop:5, marginBottom: 10},
 });
