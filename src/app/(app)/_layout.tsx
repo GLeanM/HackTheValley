@@ -17,6 +17,8 @@ export default function AppLayout() {
         />
         <Stack.Screen name="answer" />
       </Stack>
+      {/* Loads the on-device trash classifier in the background once signed in. */}
+      <ClassifierHost />
     </>
   );
 }
