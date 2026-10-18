@@ -52,6 +52,12 @@
           "imageWidth": 76
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Relast uses your location while the app is open to estimate how you travel and the CO₂ you save by walking."
+        }
+      ],
       "expo-font",
       "expo-image",
       "expo-status-bar",

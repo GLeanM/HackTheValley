@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FactCarousel } from '@/components/relast/fact-carousel';
 import { Mascot } from '@/components/relast/mascot';
+import { TodayCarbon } from '@/components/relast/today-carbon';
 import { Palette, Radius, Shadow } from '@/constants/palette';
 import { useApp } from '@/state/app-context';
 
@@ -42,6 +43,8 @@ export default function HomeScreen() {
         <Text style={styles.sub}>Make it last. Do it fast.</Text>
 
         <FactCarousel />
+
+        <TodayCarbon />
 
         <Pressable
           accessibilityRole="link"
@@ -79,10 +82,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.cream },
   scroll: { padding: 20, gap: 14 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { fontSize: 60, fontWeight: '900', color: Palette.forestDark, letterSpacing: -0.5 },
+  brand: { fontSize: 60, fontWeight: '900', color: Palette.brown, letterSpacing: -0.5 },
   avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: Palette.forest, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontWeight: '800', color: Palette.tea, fontSize: 16 },
-  hello: { fontSize: 30, fontWeight: '800', color: Palette.forestDark, marginTop: 6, letterSpacing: -0.6 },
+  hello: { fontSize: 30, fontWeight: '800', color: Palette.brown, marginTop: 6, letterSpacing: -0.6 },
   sub: { fontSize: 16, color: Palette.muted, marginBottom: 4 },
   impact: { flexDirection: 'row', gap: 14, alignItems: 'center', backgroundColor: Palette.forest, borderRadius: Radius.card, padding: 18, ...Shadow.card },
   impactIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: Palette.moss, alignItems: 'center', justifyContent: 'center' },

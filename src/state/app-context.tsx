@@ -1,5 +1,8 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import { supabase } from "@/lib/supabase";
 import type { AiResponse, CategoryChoice, HistoryEntry } from "@/services/ai";
+import type { TravelMode, Trip, TripDraft } from "@/services/carbon";
 import {
   createContext,
   useCallback,
@@ -36,7 +39,33 @@ interface AppState {
     imageUri: string | null;
     response: AiResponse;
   }) => Promise<HistoryEntry>;
+  /** Travel segments recorded by the trip tracker, newest first. */
+  trips: Trip[];
+  addTrip: (trip: TripDraft) => Promise<void>;
+  /** Whether the user has switched on foreground trip tracking. */
+  tracking: boolean;
+  setTracking: (on: boolean) => void;
 }
+
+const TRACKING_KEY = "relast:tracking";
+
+interface TripRow {
+  id: string;
+  started_at: string;
+  ended_at: string;
+  mode: TravelMode;
+  distance_m: number;
+  co2_g: number;
+}
+
+const fromTripRow = (r: TripRow): Trip => ({
+  id: r.id,
+  startedAt: r.started_at,
+  endedAt: r.ended_at,
+  mode: r.mode,
+  distanceM: r.distance_m,
+  co2G: r.co2_g,
+});
 
 const Ctx = createContext<AppState | null>(null);
 
@@ -127,6 +156,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [tracking, setTrackingState] = useState(false);
 
   const userId = user?.id;
 
@@ -168,6 +199,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [userId]);
 
+  // Load the signed-in user's recorded trips
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+
+    supabase
+      .from("trips")
+      .select("id, started_at, ended_at, mode, distance_m, co2_g")
+      .order("started_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error?.code === "PGRST205") {
+          console.warn(
+            "Trips table missing — run supabase/migrations/20261018000000_trips.sql in the Supabase SQL editor.",
+          );
+        } else if (error) {
+          console.warn("Error fetching trips:", error.message);
+        }
+        if (!cancelled && data) setTrips((data as TripRow[]).map(fromTripRow));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  // Restore the tracking switch (a device preference, not per account)
+  useEffect(() => {
+    AsyncStorage.getItem(TRACKING_KEY)
+      .then((v) => setTrackingState(v === "1"))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -197,6 +260,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } else {
           setUser(null);
           setHistory([]);
+          setTrips([]);
         }
       },
     );
@@ -270,7 +334,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setHistory([]);
+    setTrips([]);
   }, []);
+
+  const setTracking = useCallback((on: boolean) => {
+    setTrackingState(on);
+    AsyncStorage.setItem(TRACKING_KEY, on ? "1" : "0").catch(() => {});
+  }, []);
+
+  const addTrip = useCallback<AppState["addTrip"]>(
+    async (trip) => {
+      const { data, error } = await supabase
+        .from("trips")
+        .insert({
+          user_id: user?.id,
+          started_at: trip.startedAt,
+          ended_at: trip.endedAt,
+          mode: trip.mode,
+          distance_m: trip.distanceM,
+          co2_g: trip.co2G,
+        })
+        .select("id")
+        .single();
+
+      if (error) console.warn("Failed to save trip:", error.message);
+
+      const full: Trip = {
+        ...trip,
+        id: data?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      };
+      setTrips((prev) => [full, ...prev]);
+    },
+    [user?.id],
+  );
 
   const addHistory = useCallback<AppState["addHistory"]>(
     async (entry) => {
@@ -315,8 +411,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ ready, user, history, signUp, signIn, signOut, addHistory }),
-    [ready, user, history, signUp, signIn, signOut, addHistory],
+    () => ({
+      ready,
+      user,
+      history,
+      signUp,
+      signIn,
+      signOut,
+      addHistory,
+      trips,
+      addTrip,
+      tracking,
+      setTracking,
+    }),
+    [
+      ready,
+      user,
+      history,
+      signUp,
+      signIn,
+      signOut,
+      addHistory,
+      trips,
+      addTrip,
+      tracking,
+      setTracking,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
