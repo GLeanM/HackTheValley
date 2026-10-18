@@ -5,13 +5,13 @@
 export const Palette = {
   // Brand swatches
   moss: '#82D173',
-  lightGreen: '#ABFAA9',
+  lightGreen: '#ad9971',
   steel: '#fabe8c',
   indigo: '#bc7833',
   violet: '#916507',
   charcoal: '#e7a15b',
   grey: '#bf8130',
-  olive: '#899d69',
+  olive: '#cfe1b2',
   tea: '#c7e7a7',
   beige: '#F2FBE0',
 
@@ -22,7 +22,7 @@ export const Palette = {
   mintDeep: '#C9DEE5',
   leaf: '#68a182',
   forest: '#3e724e',
-  forestDark: '#245647',
+  forestDark: '#5b4931',
   ink: '#263a2e',
   muted: '#64747A',
   border: '#D8E3E2',
