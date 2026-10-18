@@ -74,7 +74,7 @@ export default function LoginScreen() {
         >
           <Mascot size={96} />
           <Text style={styles.brand}>Relast</Text>
-          <Text style={styles.tag}>Make it last. Waste less.</Text>
+          <Text style={styles.tag}>Make it last. Do it fast.</Text>
 
           <View style={styles.form}>
             {error && <Text style={styles.error}>{error}</Text>}

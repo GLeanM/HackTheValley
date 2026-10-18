@@ -22,20 +22,31 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.bottom}>
-        <Text style={styles.headline}>Make it last.{'\n'}Waste less.</Text>
+        <Text style={styles.headline}>
+          Make it last.{'\n'}Do it fast.
+        </Text>
         <Text style={styles.sub}>Small choices. Real impact.</Text>
 
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push('/signup')}
-          style={({ pressed }) => [styles.cta, pressed && { opacity: 0.85 }]}>
+          style={({ pressed }) => [
+            styles.cta,
+            pressed && { opacity: 0.85 },
+          ]}
+        >
           <Text style={styles.ctaText}>Get Started</Text>
-          <Ionicons name="arrow-forward" size={20} color={Palette.forestDark} />
+          <Ionicons
+            name="arrow-forward"
+            size={20}
+            color={Palette.forestDark}
+          />
         </Pressable>
+
         <Link href="/login" style={styles.link}>
           I already have an account
         </Link>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
