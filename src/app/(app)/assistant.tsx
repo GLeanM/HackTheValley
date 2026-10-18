@@ -415,8 +415,8 @@ const styles = StyleSheet.create({
     minHeight: 38,
     maxHeight: 86,
     fontSize: 16,
-    color: Palette.ink,
-    outlineWidth: 1,
+    color: Palette.white,
+    outlineWidth: 0,
   },
   header: {
     flexDirection: "row",
