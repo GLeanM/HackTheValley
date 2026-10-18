@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FactCarousel } from '@/components/relast/fact-carousel';
 import { Mascot } from '@/components/relast/mascot';
+import { TodayCarbon } from '@/components/relast/today-carbon';
 import { Palette, Radius, Shadow } from '@/constants/palette';
 import { useApp } from '@/state/app-context';
 
@@ -42,6 +43,8 @@ export default function HomeScreen() {
         <Text style={styles.sub}>Make it last. Do it fast.</Text>
 
         <FactCarousel />
+
+        <TodayCarbon />
 
         <Pressable
           accessibilityRole="link"

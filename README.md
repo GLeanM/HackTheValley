@@ -42,6 +42,24 @@ The first run takes a few minutes and downloads around 1 GB, mostly PyTorch. Bot
 
 Restart `npx expo start` after changing `.env`.
 
+### Carbon tracking
+
+The Profile tab's **Travel impact** card estimates CO₂ saved by walking from your speed while the app is open (foreground location only). Its `trips` table comes from `supabase/migrations/20261018000000_trips.sql`; apply it with the database steps below.
+
+## Database (Supabase)
+
+Schema changes live in `supabase/migrations/` and are pushed with the Supabase CLI (a devDependency):
+
+```bash
+npm run db:login           # once per machine — opens the browser for an access token
+npm run db:link            # once per clone — asks for the database password (Dashboard → Project Settings → Database)
+npm run db:status          # which migrations the remote has applied
+npm run db:new <name>      # create a new migration file, then write the SQL
+npm run db:push            # apply pending migrations to the linked project
+```
+
+Write migrations so they can be re-run (`if not exists`, `drop policy if exists` before `create policy`). The `history` table was created by hand before migrations were tracked, so `20261017000000_history.sql` is marked as applied without being run and doesn't exactly match the live columns.
+
 ## Checks
 
 ```bash

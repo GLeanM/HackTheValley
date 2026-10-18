@@ -151,14 +151,26 @@ danger #B3402F   dangerBg #FBE9E5
 
 One plain React Context is the single source of truth. **No zustand, redux, or react-query — do not add one.**
 
-`useApp()` returns `{ ready, user, history, signIn, signOut, addHistory }`.
+`useApp()` returns `{ ready, user, history, signUp, signIn, signOut, addHistory, trips, addTrip, tracking, setTracking }`.
 
-- `history: HistoryEntry[]`, **newest first**. `addHistory` mints the `id` and ISO `createdAt`, prepends, and fire-and-forget persists.
-- Persistence is **AsyncStorage only**, keys `relast:user` and `relast:history:<email-lowercased>` (history is scoped per user).
-- `signOut` removes the user but **deliberately keeps history** for the next login. Navigating Home must never drop history.
-- Auth is **mock**: login/signup validate email format and password length client-side, then discard the password and call `signIn({ name, email })`. Nothing is hashed or verified.
-- `@supabase/supabase-js` is installed but **imported by zero files**. `supabase/` holds only a default `config.toml` — no migrations, no schema, no linked project.
-- The file's own header states the intent: *replace with Supabase auth/tables later; only this file needs to change.* Keep that boundary — don't scatter persistence logic into screens.
+- Auth and data are **Supabase** (`src/lib/supabase.ts`, `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`). The session is persisted in AsyncStorage by the Supabase client.
+- `history: HistoryEntry[]`, **newest first**, from table `history` (columns `submitted_text`, `image_reference`, `ai_response`). Images go to the private `history-images` bucket and are shown via signed URLs.
+- `trips: Trip[]`, newest first, from table `trips` (see §7b). `tracking` is a device preference stored in AsyncStorage under `relast:tracking`.
+- `signOut` clears `history` and `trips` from memory; the rows stay in Supabase for the next login.
+- ⚠️ `supabase/migrations/20261017000000_history.sql` has **drifted** from the live schema (it still names the columns `text` / `image_uri` / `response`). Trust the code.
+- Keep the boundary: persistence lives in this file, not in screens.
+- **Schema changes:** add a migration with `npm run db:new <name>` and apply it with `npm run db:push` (after one-time `db:login` + `db:link`; check with `db:status`). Migrations must be idempotent. `20261017000000_history.sql` is recorded as applied via `migration repair` — never replay it.
+
+---
+
+## 7b. Carbon tracking (`src/services/carbon/`)
+
+The Profile tab's **Travel impact** card (`components/relast/carbon-card.tsx`) estimates CO₂ saved by walking vs. emitted travelling. It is an **expected-value model**: speed tier × average emission factor, never presented as a measurement.
+
+- **Capture:** `components/relast/trip-tracker.tsx` (renders nothing, mounted in `(app)/_layout.tsx`) runs `expo-location` `watchPositionAsync` (Balanced accuracy, 15 s / 10 m) **only while the app is open and the user has switched tracking on**. Foreground "when in use" permission only, so it works in Expo Go. Backgrounding the app flushes the current segment.
+- **Logic:** `trip-recorder.ts` is a pure state machine: drops fixes with accuracy > 50 m, derives speed from haversine distance ÷ Δt when `coords.speed` is null/≤0 (web, iOS invalid), smooths with a median of 3, switches mode after 2 consecutive fixes, and ends segments on standstill, a > 5 min gap, or flush. Segments under 100 m are discarded.
+- **Tiers / factors** (`factors.ts`): stationary < 0.5 m/s; walk < 2.5 (0 g/km); vehicle (car/bus blend) < 33 (120 g/km); rail < 70 (41 g/km); flight above (255 g/km). **Saved = walk km × 120.** Cycling/running land in "vehicle" — the card says so.
+- **Storage:** client computes `co2_g` and inserts into Supabase `trips` (`supabase/migrations/20261018000000_trips.sql`, RLS owner-only). There is no Edge Function.
 
 ---
 
@@ -199,7 +211,7 @@ Flag these to the user before claiming a change runs:
 `npx tsc --noEmit` reports exactly 9 errors, **all** of them `TS2307 Cannot find module` for the two packages above — nothing else in the codebase is type-broken. Once both are installed the project should typecheck clean.
 
 ### Out of scope for now
-Games, carbon tracking, a real database. Focus on polishing the user journey and the circular selector.
+Games. Background trip tracking (needs a dev build + `expo-task-manager`). Focus on polishing the user journey and the circular selector.
 
 ---
 
