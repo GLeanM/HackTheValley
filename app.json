@@ -8,7 +8,11 @@
     "scheme": "hackthevalley",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.nomkwksteam.HackTheValley",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,6 +30,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Relast uses your camera to identify items, waste and food.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Relast uses your photos so you can ask about items you own.",
@@ -41,6 +52,12 @@
           "imageWidth": 76
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Relast uses your location while the app is open to estimate how you travel and the CO₂ you save by walking."
+        }
+      ],
       "expo-font",
       "expo-image",
       "expo-status-bar",
@@ -49,6 +66,16 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "821ded6d-85a2-4243-aa10-5f8bc894bd25"
+      }
     }
   }
 }

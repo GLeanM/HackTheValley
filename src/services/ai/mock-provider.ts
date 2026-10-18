@@ -79,6 +79,20 @@ function build(req: AiRequest, cat: Category, guessed: boolean): AiResponse {
     };
   }
 
+  // The trash classifier ran (see index.ts): echo its label instead of the canned item.
+  const label = req.hint?.match(/"([^"]+)"/)?.[1];
+  if (label) {
+    return {
+      ...base,
+      itemName: label.charAt(0).toUpperCase() + label.slice(1).replace(/-/g, ' '),
+      answer: `Our trash classifier thinks this is ${label.replace(/-/g, ' ')}. The bin above is based on that.`,
+      why: 'Putting items in the right bin keeps recycling and compost streams clean.',
+      recommendations: ['Empty and rinse containers before sorting.', 'Check your city’s guide if you are unsure.'],
+      alternatives: [],
+      confidence: { level: 'medium', note: NOTE_LOCAL },
+    };
+  }
+
   return {
     ...base,
     itemName: 'Plastic food container',
@@ -95,7 +109,11 @@ function build(req: AiRequest, cat: Category, guessed: boolean): AiResponse {
       level: guessed ? 'low' : level,
       note: guessed ? NOTE_GUESS : NOTE_LOCAL,
     },
-    bin: 'unsure',
+    bin: 'recycling',
+    reuse: {
+      possible: true,
+      ideas: ['Store leftovers or meal-prep lunches', 'Organize screws, beads or craft supplies', 'Start seedlings in it as a mini planter'],
+    },
   };
 }
 

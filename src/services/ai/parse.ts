@@ -2,7 +2,7 @@ import { AiError, type AiResponse, type BinType, type Category, type Recipe } fr
 
 const CATEGORIES = ['food', 'sorter', 'lifecycle'];
 const LEVELS = ['low', 'medium', 'high'];
-const BINS = ['recycling', 'garbage', 'compost', 'unsure'];
+const BINS = ['recycling', 'garbage', 'compost', 'hazardous', 'ewaste', 'unsure'];
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 const str = (v: unknown, field: string): string => {
@@ -12,7 +12,7 @@ const str = (v: unknown, field: string): string => {
 const strList = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 
-/** Validates untrusted backend JSON into an AiResponse (throws AiError if malformed). */
+/** Validates untrusted model/backend JSON into an AiResponse (throws AiError if malformed). */
 export function parseAiResponse(raw: unknown): AiResponse {
   if (!isObj(raw)) throw new AiError('Malformed response from the server.');
   const category = raw.category;
@@ -31,6 +31,10 @@ export function parseAiResponse(raw: unknown): AiResponse {
         repairs: strList(raw.lifecycle.repairs),
         donation: strList(raw.lifecycle.donation),
       }
+    : undefined;
+
+  const reuse = isObj(raw.reuse)
+    ? { possible: raw.reuse.possible === true, ideas: strList(raw.reuse.ideas) }
     : undefined;
 
   const recipes: Recipe[] | undefined = Array.isArray(raw.recipes)
@@ -56,6 +60,7 @@ export function parseAiResponse(raw: unknown): AiResponse {
     },
     bin:
       typeof raw.bin === 'string' && BINS.includes(raw.bin) ? (raw.bin as BinType) : undefined,
+    reuse,
     lifecycle,
     recipes,
     source: 'gemini',

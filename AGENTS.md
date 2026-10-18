@@ -36,6 +36,7 @@ Login → Home → Assistant (text / photo / category) → Answer → Ask again 
 **This is an npm project** — only `package-lock.json` exists. Use `npx`, never `bunx`.
 
 ```bash
+npm install && npm run build:model  # first-time setup; build:model needs Python 3 (see README / §6)
 npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm add — resolves SDK-compatible versions
 npx expo start              # dev server (= npm start)
 npx expo lint               # lint (= npm run lint)
@@ -112,31 +113,36 @@ danger #B3402F   dangerBg #FBE9E5
 
 ## 6. The AI layer (`src/services/ai/`)
 
-> **The real Gemini integration is NOT active.** Every response today comes from the mock provider. `answer.tsx` honestly labels it *"Sample answer — the live AI isn’t connected yet."* Never tell the user Gemini is wired up.
+> **Gemini is live when `EXPO_PUBLIC_GEMINI_API_KEY` is set in `.env`** (gitignored). The app then calls Gemini directly (`direct-gemini-provider.ts`, model `gemini-3.5-flash-lite`). Without a key or backend URL every answer comes from the mock provider, and `answer.tsx` labels it *"Sample answer — the live AI isn’t connected yet."*
 
 | File | Role |
 | --- | --- |
 | `index.ts` | Barrel + provider selection. |
 | `types.ts` | All AI types and the shared `CATEGORY_META` / `CATEGORIES` constants. |
 | `mock-provider.ts` | Canned responses with a 1.2s delay. |
-| `gemini-provider.ts` | Talks to **our** backend, never to Gemini directly. |
+| `gemini-provider.ts` | Talks to **our** backend (`EXPO_PUBLIC_RELAST_API_URL`), never to Gemini directly. |
+| `direct-gemini-provider.ts` | Calls Gemini straight from the app with the `.env` key. Holds the per-category `SYSTEM_PROMPT` and JSON `RESPONSE_SCHEMA`. |
 | `parse.ts` | Defensively validates untrusted backend JSON. |
+| `classifier.ts` | Label → `BinType` map + confidence rule; calls the fallback classifier server in `server/` (`POST /classify`). |
+| `on-device-classifier.ts` | Bridge to the on-device model in `public/classifier.html` (postMessage, 15 s timeout). |
+| `image.ts` | `toDataUrl(uri)` shared by Gemini + classifier. |
 
 **Rules:**
 
 - **Always import from the barrel `@/services/ai`** — never from `./mock-provider` or `./types` from outside the directory.
 - Provider is chosen at module load in `index.ts`:
-  ```ts
-  const apiUrl = process.env.EXPO_PUBLIC_RELAST_API_URL;
-  export const aiProvider: AiProvider = apiUrl ? createGeminiProvider(apiUrl) : mockProvider;
-  ```
-  No `.env` exists, so this always resolves to `mockProvider`.
-- **No Gemini API key ever goes in this repo.** The key lives in a backend that does not exist yet. The contract `gemini-provider.ts` expects:
+`EXPO_PUBLIC_RELAST_API_URL` (backend) wins, then `EXPO_PUBLIC_GEMINI_API_KEY` (direct Gemini), else `mockProvider`. Expo reads `.env` only at startup, so restart `npx expo start` after changing it.
+- **Never commit the Gemini key.** It lives only in the gitignored `.env`. Any `EXPO_PUBLIC_` value is bundled into the web site and app, so it's extractable: this is demo-grade, and the key should be restricted or rotated after the event. The long-term plan is a backend; the contract `gemini-provider.ts` expects:
   `POST {EXPO_PUBLIC_RELAST_API_URL}/ask` as `multipart/form-data` with `text`, `category` (`auto|food|sorter|lifecycle`), optional `image` file → JSON matching `AiResponse` minus `source`.
+- **Trash classifier (Sorter):** `index.ts` always wraps the text provider. For `sorter`/`auto` requests with a photo it tries, in order: (1) **on-device**: `public/classifier.html` runs `dima806/garbage_types_image_detection` (int8 ONNX) with Transformers.js. `src/components/relast/classifier-host` mounts it in a hidden iframe on web or a hidden WebView on native, from `(app)/_layout.tsx`. (2) The **server** at `EXPO_PUBLIC_RELAST_CLASSIFIER_URL` (`server/`), if set. (3) Nothing. A confident result sets `bin` and `classifier` on the response and is passed to the text provider as `AiRequest.hint`. An `unsure` result or a failure moves on to the next option silently.
+  - Model + runtime files in `public/models/` and `public/vendor/` are **gitignored**: run `npm run build:model` after cloning (needs Python 3; produces ~90 MB model + ~75 MB wasm).
+  - Native loads the page from the Expo dev server (`Constants.expoConfig.hostUri`), so on-device works in Expo Go/dev only. A native production build has no host, so it falls back to the server or plain answer.
+  - The label → bin map and the floor-0.2 / margin-1.5 rule exist in both `classifier.ts` and `server/app.py`. Keep them in sync.
 - Every response carries `source: 'mock' | 'gemini'` so the UI can stay honest. Keep that discriminator.
 - `AiResponse` is the contract: `category`, `itemName`, `question`, `answer`, `why`, `recommendations[]`, `alternatives[]`, `confidence {level, note}`, plus optional `bin`, `lifecycle`, `recipes`. **Changing its shape means touching `types.ts`, `parse.ts`, `mock-provider.ts`, and `answer.tsx` together.**
 - Errors are thrown as `AiError` with a user-facing message; screens catch it and render the message.
 - **Dev trigger:** typing text matching `/\/error/i` in the assistant makes the mock provider throw — that's how you exercise the error state.
+- **Category answers come from the prompt in `direct-gemini-provider.ts`.** Lifecycle fills `lifecycle {estimate, repairs, donation}`, `reuse`, care-tip `recommendations` and repurpose/disposal `alternatives`. Food fills `recipes`, storage `recommendations` and non-trash `alternatives`. Change what the screens show there, not in `answer.tsx`.
 - Don't present uncertain guesses as facts. Recycling advice is location-dependent; the `confidence.note` field exists for exactly that caveat.
 
 ---
@@ -145,14 +151,26 @@ danger #B3402F   dangerBg #FBE9E5
 
 One plain React Context is the single source of truth. **No zustand, redux, or react-query — do not add one.**
 
-`useApp()` returns `{ ready, user, history, signIn, signOut, addHistory }`.
+`useApp()` returns `{ ready, user, history, signUp, signIn, signOut, addHistory, trips, addTrip, tracking, setTracking }`.
 
-- `history: HistoryEntry[]`, **newest first**. `addHistory` mints the `id` and ISO `createdAt`, prepends, and fire-and-forget persists.
-- Persistence is **AsyncStorage only**, keys `relast:user` and `relast:history:<email-lowercased>` (history is scoped per user).
-- `signOut` removes the user but **deliberately keeps history** for the next login. Navigating Home must never drop history.
-- Auth is **mock**: login/signup validate email format and password length client-side, then discard the password and call `signIn({ name, email })`. Nothing is hashed or verified.
-- `@supabase/supabase-js` is installed but **imported by zero files**. `supabase/` holds only a default `config.toml` — no migrations, no schema, no linked project.
-- The file's own header states the intent: *replace with Supabase auth/tables later; only this file needs to change.* Keep that boundary — don't scatter persistence logic into screens.
+- Auth and data are **Supabase** (`src/lib/supabase.ts`, `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`). The session is persisted in AsyncStorage by the Supabase client.
+- `history: HistoryEntry[]`, **newest first**, from table `history` (columns `submitted_text`, `image_reference`, `ai_response`). Images go to the private `history-images` bucket and are shown via signed URLs.
+- `trips: Trip[]`, newest first, from table `trips` (see §7b). `tracking` is a device preference stored in AsyncStorage under `relast:tracking`.
+- `signOut` clears `history` and `trips` from memory; the rows stay in Supabase for the next login.
+- ⚠️ `supabase/migrations/20261017000000_history.sql` has **drifted** from the live schema (it still names the columns `text` / `image_uri` / `response`). Trust the code.
+- Keep the boundary: persistence lives in this file, not in screens.
+- **Schema changes:** add a migration with `npm run db:new <name>` and apply it with `npm run db:push` (after one-time `db:login` + `db:link`; check with `db:status`). Migrations must be idempotent. `20261017000000_history.sql` is recorded as applied via `migration repair` — never replay it.
+
+---
+
+## 7b. Carbon tracking (`src/services/carbon/`)
+
+The Profile tab's **Travel impact** card (`components/relast/carbon-card.tsx`) estimates CO₂ saved by walking vs. emitted travelling. It is an **expected-value model**: speed tier × average emission factor, never presented as a measurement.
+
+- **Capture:** `components/relast/trip-tracker.tsx` (renders nothing, mounted in `(app)/_layout.tsx`) runs `expo-location` `watchPositionAsync` (Balanced accuracy, 15 s / 10 m) **only while the app is open and the user has switched tracking on**. Foreground "when in use" permission only, so it works in Expo Go. Backgrounding the app flushes the current segment.
+- **Logic:** `trip-recorder.ts` is a pure state machine: drops fixes with accuracy > 50 m, derives speed from haversine distance ÷ Δt when `coords.speed` is null/≤0 (web, iOS invalid), smooths with a median of 3, switches mode after 2 consecutive fixes, and ends segments on standstill, a > 5 min gap, or flush. Segments under 100 m are discarded.
+- **Tiers / factors** (`factors.ts`): stationary < 0.5 m/s; walk < 2.5 (0 g/km); vehicle (car/bus blend) < 33 (120 g/km); rail < 70 (41 g/km); flight above (255 g/km). **Saved = walk km × 120.** Cycling/running land in "vehicle" — the card says so.
+- **Storage:** client computes `co2_g` and inserts into Supabase `trips` (`supabase/migrations/20261018000000_trips.sql`, RLS owner-only). There is no Edge Function.
 
 ---
 
@@ -180,7 +198,7 @@ Match what the code already does:
 Full login → home → assistant → answer → profile journey; the rotating `CategoryWheel` (Reanimated + Gesture Handler, really interactive, not decorative); camera with image-library fallback on permission denial; image preview with change/remove before submit; disabled-until-valid submit with a loading state and an `inFlight` ref guarding duplicate submissions; error rendering; history persisted and listed newest-first; tapping a history row reopens its saved answer.
 
 ### Deliberately stubbed — do not "fix" without being asked
-Mock AI responses · mock auth · placeholder `Mascot` (nested `View`s, not art) · `scan.tsx` returning `null` · "Sustainability games coming soon" card · `supabase/` with only `config.toml` · placeholder assets throughout.
+Mock AI responses (only when no Gemini key is set) · mock auth · placeholder `Mascot` (nested `View`s, not art) · `scan.tsx` returning `null` · "Sustainability games coming soon" card · `supabase/` with only `config.toml` · placeholder assets throughout.
 
 ### Actually broken — the app will not bundle as committed
 Flag these to the user before claiming a change runs:
@@ -193,7 +211,7 @@ Flag these to the user before claiming a change runs:
 `npx tsc --noEmit` reports exactly 9 errors, **all** of them `TS2307 Cannot find module` for the two packages above — nothing else in the codebase is type-broken. Once both are installed the project should typecheck clean.
 
 ### Out of scope for now
-Games, carbon tracking, a real database. Focus on polishing the user journey and the circular selector.
+Games. Background trip tracking (needs a dev build + `expo-task-manager`). Focus on polishing the user journey and the circular selector.
 
 ---
 
@@ -204,8 +222,8 @@ These are untouched `create-expo-app` leftovers, **unreferenced by any route**:
 - `src/components/{themed-text,themed-view,hint-row,web-badge,external-link,animated-icon*}.tsx`, `src/components/ui/collapsible.tsx`
 - `src/constants/theme.ts`, `src/global.css`, `src/hooks/use-theme.ts`, `src/hooks/use-color-scheme*.ts`
 - Many assets: `react-logo*`, `expo-logo`, `expo-badge*`, `tutorial-web`, `logo-glow`, `assets/images/tabIcons/*`
-- Unused dependencies: `@expo/ui`, `expo-constants`, `expo-device`, `expo-font`, `expo-glass-effect`, `expo-linking`, `expo-system-ui`, `react-native-url-polyfill`, `@supabase/supabase-js`
-- `README.md` is boilerplate.
+- Unused dependencies: `@expo/ui`, `expo-device`, `expo-font`, `expo-glass-effect`, `expo-linking`, `expo-system-ui`, `react-native-url-polyfill`, `@supabase/supabase-js`
+- `README.md` is the human-facing setup guide (install, `build:model`, env vars). Keep it in sync with §2 and §6.
 
 **`src/constants/theme.ts` is NOT the app's theme — `src/constants/palette.ts` is.**
 

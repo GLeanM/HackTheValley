@@ -1,12 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, Tabs } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
 
-import { Palette } from '@/constants/palette';
+import { Palette, Radius, Shadow } from '@/constants/palette';
 
 type IconName = keyof typeof Ionicons.glyphMap;
-const icon = (name: IconName) =>
-  function TabIcon({ color, size }: { color: unknown; size: number }) {
-    return <Ionicons name={name} color={color as string} size={size} />;
+// Active tab gets the filled glyph on a mint pill so the current page is obvious.
+const icon = (active: IconName, inactive: IconName) =>
+  function TabIcon({ focused, color, size }: { focused: boolean; color: unknown; size: number }) {
+    return (
+      <View style={[styles.pill, focused && styles.pillActive]}>
+        <Ionicons name={focused ? active : inactive} color={color as string} size={size} />
+      </View>
+    );
   };
 
 export default function TabsLayout() {
@@ -15,23 +21,36 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Palette.forest,
-        tabBarInactiveTintColor: Palette.muted,
-        tabBarLabelStyle: { fontWeight: '600', fontSize: 11 },
-        tabBarStyle: { backgroundColor: Palette.cream, borderTopColor: Palette.border },
+        tabBarInactiveTintColor: Palette.grey,
+        tabBarLabelStyle: { fontWeight: '700', fontSize: 11 },
+        tabBarIconStyle: { width: 56, height: 32 },
+        tabBarStyle: {
+          backgroundColor: Palette.card,
+          borderTopWidth: 0,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          ...Shadow.card,
+          shadowOffset: { width: 0, height: -6 },
+        },
         sceneStyle: { backgroundColor: Palette.cream },
       }}>
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: icon('home-outline') }} />
+      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: icon('home', 'home-outline') }} />
       <Tabs.Screen
         name="scan"
-        options={{ title: 'Scan', tabBarIcon: icon('camera-outline') }}
+        options={{ title: 'Scan', tabBarIcon: icon('camera', 'camera-outline') }}
         listeners={{
           tabPress: (e) => {
             e.preventDefault();
-            router.push('/assistant');
+            router.navigate('/assistant');
           },
         }}
       />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: icon('person-outline') }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: icon('person', 'person-outline') }} />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  pill: { width: 56, height: 32, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  pillActive: { backgroundColor: Palette.tea },
+});

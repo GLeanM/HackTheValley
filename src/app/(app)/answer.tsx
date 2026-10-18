@@ -7,15 +7,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Mascot } from '@/components/relast/mascot';
 import { PrimaryButton } from '@/components/relast/primary-button';
-import { Palette } from '@/constants/palette';
-import { CATEGORY_META, type BinType } from '@/services/ai';
+import { Palette, Radius, Shadow } from '@/constants/palette';
+import { CATEGORY_META, ON_DEVICE_MODEL, type BinType } from '@/services/ai';
 import { useApp } from '@/state/app-context';
 
-const BIN_LABEL: Record<BinType, string> = {
-  recycling: 'Recycling bin',
-  garbage: 'Garbage',
-  compost: 'Compost / green bin',
-  unsure: 'Not sure yet — check local rules',
+const BIN_BADGE: Record<BinType, { label: string; icon: keyof typeof Ionicons.glyphMap; bg: string }> = {
+  recycling: { label: 'Recycle', icon: 'refresh-circle-outline', bg: Palette.moss },
+  garbage: { label: 'Landfill', icon: 'trash-outline', bg: Palette.steel },
+  compost: { label: 'Compost', icon: 'leaf-outline', bg: Palette.mint },
+  hazardous: { label: 'Hazardous', icon: 'warning-outline', bg: Palette.dangerBg },
+  ewaste: { label: 'E-waste', icon: 'hardware-chip-outline', bg: Palette.olive },
+  unsure: { label: 'Check local rules', icon: 'help-circle-outline', bg: Palette.sand },
 };
 
 export default function AnswerScreen() {
@@ -56,7 +58,15 @@ export default function AnswerScreen() {
           </View>
         )}
 
-        <Text style={styles.h1}>{r.itemName}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.h1, { flex: 1 }]}>{r.itemName}</Text>
+          {r.bin && (
+            <View style={[styles.binBadge, { backgroundColor: BIN_BADGE[r.bin].bg }]} accessibilityLabel={`Goes in: ${BIN_BADGE[r.bin].label}`}>
+              <Ionicons name={BIN_BADGE[r.bin].icon} size={16} color={Palette.forestDark} />
+              <Text style={styles.binText}>{BIN_BADGE[r.bin].label}</Text>
+            </View>
+          )}
+        </View>
         <View style={styles.chips}>
           <Text style={[styles.chip, { backgroundColor: Palette.mintDeep }]}>{meta.label}</Text>
           <Text style={[styles.chip, { backgroundColor: Palette.sand }]}>Confidence: {r.confidence.level}</Text>
@@ -64,20 +74,32 @@ export default function AnswerScreen() {
         {!!r.question && <Text style={styles.question}>“{r.question}”</Text>}
 
         {r.source === 'mock' && <Text style={styles.sample}>Sample answer — the live AI isn’t connected yet.</Text>}
+        {r.classifier && (
+          <Text style={styles.muted}>
+            Bin picked by our {r.classifier.model === ON_DEVICE_MODEL ? 'on-device ' : ''}trash classifier: {r.classifier.label} ({Math.round(r.classifier.score * 100)}% confident)
+          </Text>
+        )}
 
         <Card>
           <Text style={styles.body}>{r.answer}</Text>
         </Card>
 
-        {r.bin && (
-          <Card tint>
+        {r.reuse && (
+          <Card tint={r.reuse.possible}>
             <View style={styles.row}>
-              <Ionicons name="trash-outline" size={26} color={Palette.forest} />
+              <Ionicons name="repeat-outline" size={26} color={Palette.forest} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>Where it goes</Text>
-                <Text style={styles.big}>{BIN_LABEL[r.bin]}</Text>
+                <Text style={styles.label}>Reusable?</Text>
+                <Text style={styles.big}>{r.reuse.possible ? 'Yes — give it another life' : 'Not really reusable'}</Text>
               </View>
             </View>
+            {r.reuse.possible &&
+              r.reuse.ideas.map((t) => (
+                <View key={t} style={styles.row}>
+                  <Ionicons name="leaf-outline" size={18} color={Palette.leaf} style={{ marginTop: 3 }} />
+                  <Text style={[styles.body, { flex: 1 }]}>{t}</Text>
+                </View>
+              ))}
           </Card>
         )}
 
@@ -172,21 +194,24 @@ function Section({ title, items, icon = 'leaf-outline' }: { title: string; items
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.cream },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 6 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Palette.mint, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Palette.card, ...Shadow.card, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: Palette.forestDark },
   scroll: { padding: 20, gap: 14 },
-  image: { width: '100%', height: 200, borderRadius: 24 },
+  image: { width: '100%', height: 220, borderRadius: Radius.card },
   imageFallback: { backgroundColor: Palette.mint, alignItems: 'center', justifyContent: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  binBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  binText: { fontSize: 14, fontWeight: '700', color: Palette.forestDark },
   chips: { flexDirection: 'row', gap: 8 },
   chip: { fontSize: 13, fontWeight: '600', color: Palette.forestDark, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5, overflow: 'hidden' },
   mascotRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bubble: { backgroundColor: Palette.mint, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
+  bubble: { backgroundColor: Palette.tea, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleText: { fontWeight: '600', color: Palette.forestDark, fontSize: 14 },
-  h1: { fontSize: 28, fontWeight: '800', color: Palette.forestDark },
+  h1: { fontSize: 30, fontWeight: '800', color: Palette.forestDark, letterSpacing: -0.6 },
   h2: { fontSize: 18, fontWeight: '700', color: Palette.forestDark, marginBottom: 4 },
   question: { fontSize: 15, color: Palette.muted, fontStyle: 'italic' },
-  sample: { fontSize: 13, color: Palette.clay, fontWeight: '600' },
-  card: { backgroundColor: Palette.card, borderRadius: 22, borderWidth: 1, borderColor: Palette.border, padding: 16, gap: 6 },
+  sample: { fontSize: 13, color: Palette.grey, fontWeight: '600' },
+  card: { backgroundColor: Palette.card, borderRadius: Radius.card, borderWidth: 1, borderColor: Palette.border, padding: 18, gap: 6, ...Shadow.card },
   body: { fontSize: 16, lineHeight: 23, color: Palette.ink },
   label: { fontSize: 12, fontWeight: '700', color: Palette.muted, textTransform: 'uppercase', letterSpacing: 0.6 },
   big: { fontSize: 20, fontWeight: '800', color: Palette.forestDark },

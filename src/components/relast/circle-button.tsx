@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Palette } from '@/constants/palette';
+import { Palette, Shadow } from '@/constants/palette';
 
 interface Props {
   icon: keyof typeof Ionicons.glyphMap;
@@ -9,11 +9,12 @@ interface Props {
   onPress: () => void;
   size?: number;
   filled?: boolean;
+  alignIconToCenter?: boolean;
 }
 
-export function CircleButton({ icon, label, onPress, size = 60, filled }: Props) {
+export function CircleButton({ icon, label, onPress, size = 60, filled, alignIconToCenter = false }: Props) {
   return (
-    <View style={{ alignItems: 'center', gap: 6 }}>
+    <View style={[styles.wrap, alignIconToCenter && styles.iconCentered]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -32,10 +33,13 @@ export function CircleButton({ icon, label, onPress, size = 60, filled }: Props)
 }
 
 const styles = StyleSheet.create({
+  wrap: { alignItems: 'center', gap: 6 },
+  iconCentered: { transform: [{ translateY: 10 }] },
   btn: {
     backgroundColor: Palette.card,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: Palette.mintDeep,
+    ...Shadow.card,
     alignItems: 'center',
     justifyContent: 'center',
   },

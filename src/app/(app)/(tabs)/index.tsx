@@ -1,19 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FactCarousel } from '@/components/relast/fact-carousel';
 import { Mascot } from '@/components/relast/mascot';
-import { Palette } from '@/constants/palette';
-import { CATEGORY_META, type Category } from '@/services/ai';
+import { TodayCarbon } from '@/components/relast/today-carbon';
+import { Palette, Radius, Shadow } from '@/constants/palette';
 import { useApp } from '@/state/app-context';
 
-const FEATURES: { category: Category; title: string; sub: string }[] = [
-  { category: 'lifecycle', title: 'Product lifespan', sub: 'Repair, donate or responsibly dispose' },
-  { category: 'sorter', title: 'Waste sorter', sub: 'Find the right bin' },
-  { category: 'food', title: 'Food rescue', sub: 'Turn leftovers into meals' },
-];
+const FOOTPRINT_URL = 'https://www.footprintcalculator.org/home/en';
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -42,37 +40,26 @@ export default function HomeScreen() {
         <Text style={styles.hello}>
           {greeting()}, {user?.name ?? 'there'}
         </Text>
-        <Text style={styles.sub}>Make it last. Waste less.</Text>
+        <Text style={styles.sub}>Make it last. Do it fast.</Text>
 
-        {FEATURES.map((f) => (
-          <Pressable
-            key={f.category}
-            accessibilityRole="button"
-            accessibilityLabel={`${f.title}. ${f.sub}`}
-            onPress={() => router.push({ pathname: '/assistant', params: { category: f.category } })}
-            style={({ pressed }) => [styles.card, pressed && { transform: [{ scale: 0.98 }] }]}>
-            <View style={styles.cardIcon}>
-              <Ionicons name={CATEGORY_META[f.category].icon} size={34} color={Palette.forest} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{f.title}</Text>
-              <Text style={styles.cardSub}>{f.sub}</Text>
-            </View>
-            <Ionicons name="arrow-forward" size={20} color={Palette.forestDark} />
-          </Pressable>
-        ))}
+        <FactCarousel />
+
+        <TodayCarbon />
 
         <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Ask Relast anything"
-          onPress={() => router.push('/assistant')}
-          style={styles.ask}>
-          <Ionicons name="chatbubble-ellipses-outline" size={20} color={Palette.forest} />
-          <Text style={styles.askText}>Not sure? Ask Relast anything</Text>
+          accessibilityRole="link"
+          accessibilityLabel="Calculate your ECO-Footprint on footprintcalculator.org"
+          onPress={() => WebBrowser.openBrowserAsync(FOOTPRINT_URL)}
+          style={({ pressed }) => [styles.footprint, pressed && { opacity: 0.7 }]}>
+          <Ionicons name="calculator-outline" size={20} color={Palette.forest} />
+          <Text style={styles.footprintText}>Calculate your footprint</Text>
+          <Ionicons name="open-outline" size={16} color={Palette.muted} />
         </Pressable>
 
         <View style={styles.impact}>
-          <Ionicons name="leaf" size={26} color={Palette.leaf} />
+          <View style={styles.impactIcon}>
+            <Ionicons name="leaf" size={24} color={Palette.forestDark} />
+          </View>
           <View>
             <Text style={styles.impactLabel}>Your impact this week</Text>
             <Text style={styles.impactValue}>
@@ -95,30 +82,28 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Palette.cream },
   scroll: { padding: 20, gap: 14 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { fontSize: 34, fontWeight: '900', color: Palette.forestDark, letterSpacing: -0.5 },
-  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: Palette.mintDeep, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontWeight: '800', color: Palette.forestDark, fontSize: 16 },
-  hello: { fontSize: 28, fontWeight: '800', color: Palette.forestDark, marginTop: 6 },
+  brand: { fontSize: 60, fontWeight: '900', color: Palette.brown, letterSpacing: -0.5 },
+  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: Palette.forest, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontWeight: '800', color: Palette.tea, fontSize: 16 },
+  hello: { fontSize: 30, fontWeight: '800', color: Palette.brown, marginTop: 6, letterSpacing: -0.6 },
   sub: { fontSize: 16, color: Palette.muted, marginBottom: 4 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: Palette.mint,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: Palette.mintDeep,
-    padding: 16,
-    minHeight: 104,
-  },
-  cardIcon: { width: 68, height: 68, borderRadius: 34, backgroundColor: Palette.mintDeep, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontSize: 20, fontWeight: '800', color: Palette.ink },
-  cardSub: { fontSize: 14, color: Palette.muted, marginTop: 2 },
-  ask: { flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1.5, borderColor: Palette.mintDeep, backgroundColor: Palette.card, height: 50 },
-  askText: { color: Palette.forest, fontWeight: '700', fontSize: 15 },
-  impact: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: Palette.mint, borderRadius: 24, padding: 16 },
-  impactLabel: { fontSize: 13, color: Palette.muted },
-  impactValue: { fontSize: 18, fontWeight: '700', color: Palette.ink },
-  games: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Palette.sand, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 8 },
+  impact: { flexDirection: 'row', gap: 14, alignItems: 'center', backgroundColor: Palette.forest, borderRadius: Radius.card, padding: 18, ...Shadow.card },
+  impactIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: Palette.moss, alignItems: 'center', justifyContent: 'center' },
+  impactLabel: { fontSize: 13, color: Palette.olive, fontWeight: '600' },
+  impactValue: { fontSize: 18, fontWeight: '800', color: Palette.beige },
+  games: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Palette.sand, borderRadius: Radius.card, paddingHorizontal: 18, paddingVertical: 10 },
   gamesText: { flex: 1, fontSize: 14, fontWeight: '600', color: Palette.muted },
+  footprint: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+    borderColor: Palette.mintDeep,
+    backgroundColor: Palette.card,
+    height: 52,
+    ...Shadow.card,
+  },
+  footprintText: { color: Palette.forest, fontWeight: '700', fontSize: 15 },
 });
