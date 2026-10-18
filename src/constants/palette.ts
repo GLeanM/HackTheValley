@@ -30,6 +30,7 @@ export const Palette = {
   border: "#D8E3E2",
   sand: "#E9ECE4",
   clay: "#bd8e68",
+  brown: "#6B4226",
   danger: "#b36a2f",
   dangerBg: "#FBE9E5",
   white: "#FFFFFF",
