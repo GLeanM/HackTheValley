@@ -1,23 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Mascot } from '@/components/relast/mascot';
 import { PrimaryButton } from '@/components/relast/primary-button';
 import { Palette } from '@/constants/palette';
-import { CATEGORY_META } from '@/services/ai';
+import { CATEGORY_META, type Category } from '@/services/ai';
 import { useApp } from '@/state/app-context';
+
+type Filter = 'all' | Category;
+
+// Filter chips from Profile.png; colors are local because the palette has no blue/gray accents.
+const FILTERS: { key: Filter; label: string; color: string }[] = [
+  { key: 'all', label: 'All', color: Palette.mintDeep },
+  { key: 'sorter', label: 'Sorter', color: '#6FD43F' },
+  { key: 'lifecycle', label: 'Lifecycle', color: '#58B9FA' },
+  { key: 'food', label: 'Food', color: '#B8B8B8' },
+];
+
+const colorFor = (f: Filter) => FILTERS.find((x) => x.key === f)!.color;
 
 export default function ProfileScreen() {
   const { user, history, signOut } = useApp();
+  const [filter, setFilter] = useState<Filter>('all');
+  const visible = filter === 'all' ? history : history.filter((h) => h.response.category === filter);
   const scans = history.filter((h) => h.imageUri).length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FlatList
-        data={history}
+        data={visible}
         keyExtractor={(h) => h.id}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
@@ -40,15 +55,31 @@ export default function ProfileScreen() {
                 ? 'Nice work — every question is a step toward wasting less.'
                 : 'Ask your first question to start your sustainability journey.'}
             </Text>
-            <Text style={styles.h2}>History</Text>
+            <View style={styles.filterRow}>
+              <Text style={styles.h2}>History</Text>
+              {FILTERS.map((f) => (
+                <Pressable
+                  key={f.key}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: filter === f.key }}
+                  onPress={() => setFilter(f.key)}
+                  style={[styles.chip, { backgroundColor: f.color }, filter !== f.key && styles.chipOff]}>
+                  <Text style={styles.chipText}>{f.label.toUpperCase()}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         }
-        ListEmptyComponent={<Text style={styles.empty}>No questions yet. Your answers will show up here.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>
+            {history.length ? 'Nothing here yet for this filter.' : 'No questions yet. Your answers will show up here.'}
+          </Text>
+        }
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push({ pathname: '/answer', params: { id: item.id } })}
-            style={({ pressed }) => [styles.item, pressed && { opacity: 0.8 }]}>
+            style={({ pressed }) => [styles.item, { borderColor: colorFor(item.response.category) }, pressed && { opacity: 0.8 }]}>
             {item.imageUri ? (
               <Image source={{ uri: item.imageUri }} style={styles.thumb} contentFit="cover" />
             ) : (
@@ -93,9 +124,13 @@ const styles = StyleSheet.create({
   statNum: { fontSize: 24, fontWeight: '800', color: Palette.forestDark },
   statLabel: { fontSize: 12, color: Palette.muted, fontWeight: '600', textAlign: 'center' },
   sumText: { color: Palette.muted, fontSize: 15, textAlign: 'center' },
-  h2: { fontSize: 20, fontWeight: '800', color: Palette.forestDark, marginTop: 4 },
+  h2: { fontSize: 20, fontWeight: '800', color: Palette.forestDark },
+  filterRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  chip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
+  chipOff: { opacity: 0.45 },
+  chipText: { fontSize: 12, fontWeight: '700', color: Palette.ink },
   empty: { color: Palette.muted, textAlign: 'center', padding: 24 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Palette.card, borderRadius: 20, borderWidth: 1, borderColor: Palette.border, padding: 12 },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Palette.card, borderRadius: 20, borderWidth: 2, borderColor: Palette.border, padding: 12 },
   thumb: { width: 56, height: 56, borderRadius: 14 },
   thumbIcon: { backgroundColor: Palette.mint, alignItems: 'center', justifyContent: 'center' },
   itemTitle: { fontSize: 16, fontWeight: '700', color: Palette.ink },

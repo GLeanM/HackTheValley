@@ -45,6 +45,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
+  const userId = user?.id;
+
+  // Load the signed-in user's saved history from Supabase whenever the user changes
+  // (app start with a restored session, or a fresh login).
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    supabase
+      .from("history")
+      .select("id, created_at, category, text, image_uri, response")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        setHistory(
+          data.map((r) => ({
+            id: r.id,
+            createdAt: r.created_at,
+            category: r.category,
+            text: r.text,
+            imageUri: r.image_uri,
+            response: r.response,
+          })),
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
   useEffect(() => {
     // 1. Check existing session on boot
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -158,6 +187,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...entry,
     };
     setHistory((prev) => [full, ...prev]);
+    supabase
+      .from("history")
+      .insert({
+        id: full.id,
+        created_at: full.createdAt,
+        category: full.category,
+        text: full.text,
+        image_uri: full.imageUri,
+        response: full.response,
+      })
+      .then(({ error }) => {
+        if (error) console.warn("Failed to save history:", error.message);
+      });
     return full;
   }, []);
 
