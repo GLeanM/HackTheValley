@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CarbonCard } from "@/components/relast/carbon-card";
 import { Mascot } from "@/components/relast/mascot";
 import { PrimaryButton } from "@/components/relast/primary-button";
 import { Palette, Shadow } from "@/constants/palette";
@@ -58,6 +59,7 @@ export default function ProfileScreen() {
                 ? "Nice work — every question is a step toward wasting less."
                 : "Ask your first question to start your sustainability journey."}
             </Text>
+            <CarbonCard />
             <View style={styles.filterRow}>
               <Text style={styles.h2}>History</Text>
               <View style={styles.filters}>
