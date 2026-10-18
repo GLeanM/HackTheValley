@@ -29,7 +29,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           <Mascot size={96} />
           <Text style={styles.brand}>Relast</Text>
-          <Text style={styles.tag}>Make it last. Waste less.</Text>
+          <Text style={styles.tag}>Make it last. Do it fast.</Text>
 
           <View style={styles.form}>
             <TextInput style={styles.input} placeholder="Email" placeholderTextColor={Palette.muted} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />

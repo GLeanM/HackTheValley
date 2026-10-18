@@ -19,7 +19,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.bottom}>
-        <Text style={styles.headline}>Make it last.{'\n'}Waste less.</Text>
+        <Text style={styles.headline}>Make it last.{'\n'}Do it fast.</Text>
         <Text style={styles.sub}>Small choices. Real impact.</Text>
 
         <Pressable
